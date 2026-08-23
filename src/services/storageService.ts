@@ -490,6 +490,28 @@ export const storageService = {
   saveSettings: (settings: SiteSettings): SiteSettings => {
     localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
     storageService.logAction('UPDATE', 'إعدادات الموقع (Settings)', 'site-settings', `تحديث إعدادات واسم المكتب: ${settings.firmNameAr}`);
+    
+    // Automatically keep the Headquarters office in sync with settings
+    try {
+      const offices = storageService.getOffices();
+      if (Array.isArray(offices) && offices.length > 0) {
+        const hqIndex = offices.findIndex(o => o.isHeadquarter) !== -1 ? offices.findIndex(o => o.isHeadquarter) : 0;
+        if (hqIndex >= 0 && offices[hqIndex]) {
+          offices[hqIndex] = {
+            ...offices[hqIndex],
+            phone: settings.phone || offices[hqIndex].phone,
+            email: settings.email || offices[hqIndex].email,
+            addressAr: settings.addressAr || offices[hqIndex].addressAr,
+            addressEn: settings.addressEn || offices[hqIndex].addressEn,
+            addressTr: settings.addressTr || offices[hqIndex].addressTr,
+          };
+          localStorage.setItem(STORAGE_KEYS.OFFICES, JSON.stringify(offices));
+        }
+      }
+    } catch (e) {
+      console.warn('Could not auto-sync HQ office with settings', e);
+    }
+
     mirrorAllDataToPersistence();
     notifyChange();
     return settings;

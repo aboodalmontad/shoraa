@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { X, Scale, Send, CheckCircle2 } from 'lucide-react';
+import { X, Scale, Send, CheckCircle2, Phone, Mail } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { storageService } from '../services/storageService';
-import { Partner, PracticeArea, Language } from '../types';
+import { Partner, PracticeArea, Language, SiteSettings } from '../types';
 import { useTranslation, getLocalized } from '../services/i18n';
 
 interface ConsultationModalProps {
@@ -13,6 +13,7 @@ interface ConsultationModalProps {
   defaultPracticeId?: string;
   defaultPartnerId?: string;
   lang: Language;
+  settings?: SiteSettings;
 }
 
 export const ConsultationModal: React.FC<ConsultationModalProps> = ({
@@ -23,8 +24,10 @@ export const ConsultationModal: React.FC<ConsultationModalProps> = ({
   defaultPracticeId,
   defaultPartnerId,
   lang,
+  settings: propSettings,
 }) => {
   const t = useTranslation(lang);
+  const currentSettings = propSettings || storageService.getSettings();
 
   const [formData, setFormData] = useState({
     fullName: '',
@@ -307,8 +310,26 @@ export const ConsultationModal: React.FC<ConsultationModalProps> = ({
                 />
               </div>
 
+              {/* Direct Urgent Contact Row */}
+              <div className="pt-3 border-t border-[#e6ddcc] flex flex-wrap items-center justify-between gap-3 text-[11px] text-[#6b6255]">
+                <div className="flex items-center gap-1.5">
+                  <Phone className="w-3.5 h-3.5 text-[#b38a38]" />
+                  <span>{lang === 'ar' ? 'للحالات الطارئة جداً:' : lang === 'tr' ? 'Acil durumlar için:' : 'For urgent matters:'}</span>
+                  <a href={`tel:${currentSettings.emergencyPhone}`} className="text-[#181512] font-bold font-mono hover:text-[#87641d] ltr">
+                    {currentSettings.emergencyPhone}
+                  </a>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <Mail className="w-3.5 h-3.5 text-[#b38a38]" />
+                  <a href={`mailto:${currentSettings.email}`} className="text-[#181512] font-medium hover:text-[#87641d]">
+                    {currentSettings.email}
+                  </a>
+                </div>
+              </div>
+
               {/* Buttons */}
-              <div className="pt-2 flex items-center justify-end gap-3">
+              <div className="pt-1 flex items-center justify-end gap-3">
                 <button
                   type="button"
                   onClick={onClose}

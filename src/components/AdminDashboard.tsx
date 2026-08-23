@@ -4921,45 +4921,104 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
                       </div>
                     </div>
 
+                    {/* Phones and Emails and Working Hours */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                       <div>
-                        <label className="block text-xs text-slate-300 mb-1">الهاتف الرئيسي</label>
+                        <label className="block text-xs font-semibold text-slate-200 mb-1 flex items-center gap-1.5">
+                          <Phone className="w-3.5 h-3.5 text-[#c5a869]" />
+                          <span>{isAr ? 'الهاتف الرئيسي المباشر (Phone)' : 'Primary Phone'}</span>
+                        </label>
                         <input
                           type="text"
                           value={settings.phone}
                           onChange={(e) => setSettings({ ...settings, phone: e.target.value })}
-                          className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs font-mono"
+                          placeholder="+966 11 456 7890"
+                          className="w-full px-3 py-2.5 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs font-mono focus:border-[#c5a869]"
                         />
+                        <span className="text-[10px] text-slate-400 mt-0.5 block">
+                          {isAr ? 'يظهر في أعلى الموقع وقسم تواصل معنا والفوتر' : 'Appears in top bar, contact section & footer'}
+                        </span>
                       </div>
+
                       <div>
-                        <label className="block text-xs text-slate-300 mb-1">خط الطوارئ 24/7</label>
+                        <label className="block text-xs font-semibold text-slate-200 mb-1 flex items-center gap-1.5">
+                          <Shield className="w-3.5 h-3.5 text-[#c5a869]" />
+                          <span>{isAr ? 'خط الطوارئ والاستشارات 24/7 (Emergency Hotline)' : '24/7 Emergency Hotline'}</span>
+                        </label>
                         <input
                           type="text"
                           value={settings.emergencyPhone}
                           onChange={(e) => setSettings({ ...settings, emergencyPhone: e.target.value })}
-                          className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs font-mono"
+                          placeholder="+966 50 123 4567"
+                          className="w-full px-3 py-2.5 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs font-mono focus:border-[#c5a869]"
                         />
+                        <span className="text-[10px] text-slate-400 mt-0.5 block">
+                          {isAr ? 'مخصص للقضايا العاجلة والخط الساخن السريع' : 'Dedicated to high-stakes urgent issues'}
+                        </span>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs text-slate-300 mb-1">البريد الإلكتروني العام</label>
+                        <label className="block text-xs font-semibold text-slate-200 mb-1 flex items-center gap-1.5">
+                          <Mail className="w-3.5 h-3.5 text-[#c5a869]" />
+                          <span>{isAr ? 'البريد الإلكتروني العام المعتمد (Email)' : 'Official Email'}</span>
+                        </label>
                         <input
                           type="email"
                           value={settings.email}
                           onChange={(e) => setSettings({ ...settings, email: e.target.value })}
-                          className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs"
+                          placeholder="info@aladllaw.com"
+                          className="w-full px-3 py-2.5 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869]"
                         />
                       </div>
+
                       <div>
-                        <label className="block text-xs text-slate-300 mb-1">كلمة مرور لوحة التحكم الجديدة</label>
+                        <label className="block text-xs font-semibold text-slate-200 mb-1 flex items-center gap-1.5">
+                          <Clock className="w-3.5 h-3.5 text-[#c5a869]" />
+                          <span>{isAr ? 'ساعات استقبال المراجعين والعمل (Working Hours)' : 'Working Hours'}</span>
+                        </label>
                         <input
                           type="text"
-                          value={settings.adminPassword || 'admin'}
-                          onChange={(e) => setSettings({ ...settings, adminPassword: e.target.value })}
-                          className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs"
+                          value={settings.workingHoursAr || ''}
+                          onChange={(e) => setSettings({ ...settings, workingHoursAr: e.target.value })}
+                          placeholder="الأحد - الخميس: 8:00 ص - 6:00 م"
+                          className="w-full px-3 py-2.5 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869]"
                         />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-200 mb-1">
+                        {isAr ? 'كلمة مرور لوحة التحكم الجديدة (Admin Password)' : 'Admin Password'}
+                      </label>
+                      <input
+                        type="text"
+                        value={settings.adminPassword || 'admin'}
+                        onChange={(e) => setSettings({ ...settings, adminPassword: e.target.value })}
+                        className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs"
+                      />
+                    </div>
+
+                    {/* Live Contact Preview Card */}
+                    <div className="p-4 rounded-xl bg-slate-950 border border-[#c5a869]/30 space-y-2">
+                      <span className="text-[11px] font-bold text-[#e5cb8e] flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-[#c5a869]" />
+                        <span>{isAr ? 'معاينة فورية لظهور بيانات التواصل في صفحة «تواصل معنا»:' : 'Live Preview of Contact Channels in Website:'}</span>
+                      </span>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs text-slate-300">
+                        <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800">
+                          <span className="text-[10px] text-slate-400 block">{isAr ? 'الهاتف المباشر:' : 'Direct Phone:'}</span>
+                          <span className="font-mono text-white font-bold">{settings.phone || '—'}</span>
+                        </div>
+                        <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800">
+                          <span className="text-[10px] text-amber-400 block">{isAr ? 'خط الطوارئ 24/7:' : '24/7 Hotline:'}</span>
+                          <span className="font-mono text-white font-bold">{settings.emergencyPhone || '—'}</span>
+                        </div>
+                        <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800">
+                          <span className="text-[10px] text-slate-400 block">{isAr ? 'البريد الرسمي:' : 'Email:'}</span>
+                          <span className="text-white font-semibold truncate block">{settings.email || '—'}</span>
+                        </div>
                       </div>
                     </div>
                   </div>

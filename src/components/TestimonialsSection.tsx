@@ -27,6 +27,11 @@ export const TestimonialsSection: React.FC<TestimonialsSectionProps> = ({ testim
   const clientName = getLocalized(current, 'clientName', lang, current.clientName);
   const clientRole = getLocalized(current, 'clientRole', lang, current.clientRole);
   const company = getLocalized(current, 'company', lang, current.company);
+  const caseType = getLocalized(current, 'caseType', lang, current.caseType);
+
+  const isRtl = lang === 'ar';
+  const PrevArrow = isRtl ? ChevronRight : ChevronLeft;
+  const NextArrow = isRtl ? ChevronLeft : ChevronRight;
 
   return (
     <section id="testimonials" className="py-24 bg-[#fbf8f2] relative border-t border-[#e6ddcc] overflow-hidden">
@@ -75,7 +80,7 @@ export const TestimonialsSection: React.FC<TestimonialsSectionProps> = ({ testim
 
               <div className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#f4eee2] border border-[#e6ddcc] text-xs text-[#87641d] font-bold">
                 <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
-                <span>{current.caseType}</span>
+                <span>{caseType}</span>
                 <span className="text-[#6b6255] font-mono">({current.year})</span>
               </div>
             </div>
@@ -123,8 +128,7 @@ export const TestimonialsSection: React.FC<TestimonialsSectionProps> = ({ testim
                   className="p-3 rounded-full bg-[#f4eee2] hover:bg-[#b38a38] text-[#4b4334] hover:text-white transition border border-[#e6ddcc] cursor-pointer"
                   aria-label="Previous Testimonial"
                 >
-                  <ChevronRight className="w-5 h-5 rtl:hidden" />
-                  <ChevronLeft className="w-5 h-5 ltr:hidden" />
+                  <PrevArrow className="w-5 h-5" />
                 </button>
 
                 <div className="text-xs font-mono font-bold text-[#6b6255] px-2">
@@ -136,8 +140,7 @@ export const TestimonialsSection: React.FC<TestimonialsSectionProps> = ({ testim
                   className="p-3 rounded-full bg-[#f4eee2] hover:bg-[#b38a38] text-[#4b4334] hover:text-white transition border border-[#e6ddcc] cursor-pointer"
                   aria-label="Next Testimonial"
                 >
-                  <ChevronLeft className="w-5 h-5 rtl:hidden" />
-                  <ChevronRight className="w-5 h-5 ltr:hidden" />
+                  <NextArrow className="w-5 h-5" />
                 </button>
               </div>
             </div>

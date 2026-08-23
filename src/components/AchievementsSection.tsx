@@ -56,6 +56,7 @@ export const AchievementsSection: React.FC<AchievementsSectionProps> = ({ caseSt
             const title = getLocalized(item, 'title', lang, item.title);
             const summary = getLocalized(item, 'summary', lang, item.summary);
             const outcome = getLocalized(item, 'outcome', lang, item.outcome);
+            const category = getLocalized(item, 'category', lang, item.category);
 
             return (
               <div
@@ -66,7 +67,7 @@ export const AchievementsSection: React.FC<AchievementsSectionProps> = ({ caseSt
                   {/* Category & Year Tag */}
                   <div className="flex items-center justify-between mb-4">
                     <span className="text-xs px-2.5 py-1 rounded-lg bg-[#b38a38]/15 text-[#87641d] font-bold">
-                      {item.category}
+                      {category}
                     </span>
                     <span className="text-xs text-[#6b6255] font-mono font-semibold">{item.year}</span>
                   </div>

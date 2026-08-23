@@ -12,6 +12,29 @@ interface PartnersSectionProps {
   onOpenConsultation: (practiceId?: string, partnerId?: string) => void;
 }
 
+const formatLanguages = (langs: string[] | undefined, l: Language) => {
+  if (!langs || langs.length === 0) return '';
+  const dict: Record<string, { en: string; tr: string; ar: string }> = {
+    'العربية': { ar: 'العربية', en: 'Arabic', tr: 'Arapça' },
+    'الإنجليزية': { ar: 'الإنجليزية', en: 'English', tr: 'İngilizce' },
+    'الفرنسية': { ar: 'الفرنسية', en: 'French', tr: 'Fransızca' },
+    'الألمانية': { ar: 'الألمانية', en: 'German', tr: 'Almanca' },
+    'التركية': { ar: 'التركية', en: 'Turkish', tr: 'Türkçe' },
+    'Türkçe': { ar: 'التركية', en: 'Turkish', tr: 'Türkçe' },
+    'English': { ar: 'الإنجليزية', en: 'English', tr: 'İngilizce' },
+    'Arabic': { ar: 'العربية', en: 'Arabic', tr: 'Arapça' },
+    'French': { ar: 'الفرنسية', en: 'French', tr: 'Fransızca' },
+    'German': { ar: 'الألمانية', en: 'German', tr: 'Almanca' },
+  };
+
+  return langs
+    .map(item => {
+      const trimmed = item.trim();
+      return dict[trimmed] ? dict[trimmed][l] || trimmed : trimmed;
+    })
+    .join(' • ');
+};
+
 export const PartnersSection: React.FC<PartnersSectionProps> = ({
   partners,
   lang,
@@ -299,7 +322,12 @@ export const PartnersSection: React.FC<PartnersSectionProps> = ({
                 <span>{t.academicCredentials}</span>
               </h4>
               <div className="space-y-2">
-                {(selectedPartner.education || []).map((edu, idx) => (
+                {(lang === 'tr' && selectedPartner.educationTr && selectedPartner.educationTr.length > 0
+                  ? selectedPartner.educationTr
+                  : lang === 'en' && selectedPartner.educationEn && selectedPartner.educationEn.length > 0
+                  ? selectedPartner.educationEn
+                  : selectedPartner.education || []
+                ).map((edu, idx) => (
                   <div key={idx} className="flex items-start gap-2 text-xs text-[#2c261e] p-2.5 rounded-xl bg-white border border-[#e6ddcc]">
                     <Award className="w-3.5 h-3.5 text-[#b38a38] flex-shrink-0 mt-0.5" />
                     <span>{edu}</span>
@@ -316,7 +344,7 @@ export const PartnersSection: React.FC<PartnersSectionProps> = ({
                   {t.languagesBadge}
                 </span>
                 <span className="text-xs text-[#181512] font-bold">
-                  {(selectedPartner.languages || []).join(' • ')}
+                  {formatLanguages(selectedPartner.languages, lang)}
                 </span>
               </div>
 

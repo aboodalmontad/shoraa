@@ -51,6 +51,11 @@ export const BlogSection: React.FC<BlogSectionProps> = ({ blogPosts, lang }) => 
           {blogPosts.map(post => {
             const title = getLocalized(post, 'title', lang, post.title);
             const excerpt = getLocalized(post, 'excerpt', lang, post.excerpt);
+            const category = getLocalized(post, 'category', lang, post.category);
+            const authorName = getLocalized(post, 'authorName', lang, post.authorName);
+            const authorRole = getLocalized(post, 'authorRole', lang, post.authorRole);
+            const date = getLocalized(post, 'date', lang, post.date);
+            const readTime = getLocalized(post, 'readTime', lang, post.readTime);
 
             return (
               <article
@@ -67,7 +72,7 @@ export const BlogSection: React.FC<BlogSectionProps> = ({ blogPosts, lang }) => 
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-[#181512]/60 to-transparent opacity-60" />
                     <span className="absolute top-3 right-3 rtl:right-auto rtl:left-3 px-2.5 py-1 rounded-lg bg-white/95 text-[#87641d] text-xs font-bold backdrop-blur-md border border-[#b38a38]/30 shadow-sm">
-                      {post.category}
+                      {category}
                     </span>
                   </div>
 
@@ -77,11 +82,11 @@ export const BlogSection: React.FC<BlogSectionProps> = ({ blogPosts, lang }) => 
                     <div className="flex items-center gap-4 text-xs text-[#6b6255] mb-3 font-semibold">
                       <span className="flex items-center gap-1">
                         <Calendar className="w-3.5 h-3.5 text-[#b38a38]" />
-                        {post.date}
+                        {date}
                       </span>
                       <span className="flex items-center gap-1">
                         <Clock className="w-3.5 h-3.5 text-[#b38a38]" />
-                        {post.readTime}
+                        {readTime}
                       </span>
                     </div>
 
@@ -101,10 +106,10 @@ export const BlogSection: React.FC<BlogSectionProps> = ({ blogPosts, lang }) => 
                 <div className="px-6 py-4 border-t border-[#e6ddcc] flex items-center justify-between">
                   <div>
                     <span className="text-xs font-bold text-[#181512] block">
-                      {post.authorName}
+                      {authorName}
                     </span>
                     <span className="text-[11px] text-[#6b6255] block line-clamp-1">
-                      {post.authorRole}
+                      {authorRole}
                     </span>
                   </div>
 
@@ -137,7 +142,7 @@ export const BlogSection: React.FC<BlogSectionProps> = ({ blogPosts, lang }) => 
 
             {/* Category badge */}
             <span className="text-xs px-3 py-1 rounded-full bg-[#b38a38]/15 text-[#87641d] font-bold mb-3 inline-block">
-              {selectedPost.category}
+              {getLocalized(selectedPost, 'category', lang, selectedPost.category)}
             </span>
 
             {/* Title */}
@@ -149,19 +154,23 @@ export const BlogSection: React.FC<BlogSectionProps> = ({ blogPosts, lang }) => 
             <div className="flex items-center justify-between flex-wrap gap-4 py-4 border-y border-[#e6ddcc] mb-6 text-xs text-[#5c5343]">
               <div className="flex items-center gap-2">
                 <User className="w-4 h-4 text-[#b38a38]" />
-                <span className="font-bold text-[#181512]">{selectedPost.authorName}</span>
+                <span className="font-bold text-[#181512]">
+                  {getLocalized(selectedPost, 'authorName', lang, selectedPost.authorName)}
+                </span>
                 <span className="text-[#d8ceb8]">|</span>
-                <span>{selectedPost.authorRole}</span>
+                <span>
+                  {getLocalized(selectedPost, 'authorRole', lang, selectedPost.authorRole)}
+                </span>
               </div>
 
               <div className="flex items-center gap-4 text-[#6b6255] font-medium">
                 <span className="flex items-center gap-1">
                   <Calendar className="w-3.5 h-3.5 text-[#b38a38]" />
-                  {selectedPost.date}
+                  {getLocalized(selectedPost, 'date', lang, selectedPost.date)}
                 </span>
                 <span className="flex items-center gap-1">
                   <Clock className="w-3.5 h-3.5 text-[#b38a38]" />
-                  {selectedPost.readTime}
+                  {getLocalized(selectedPost, 'readTime', lang, selectedPost.readTime)}
                 </span>
               </div>
             </div>
@@ -195,7 +204,12 @@ export const BlogSection: React.FC<BlogSectionProps> = ({ blogPosts, lang }) => 
             {/* Tags */}
             <div className="flex flex-wrap items-center gap-2 pt-6 mt-8 border-t border-[#e6ddcc]">
               <Tag className="w-3.5 h-3.5 text-[#b38a38]" />
-              {selectedPost.tags.map((tag, i) => (
+              {(lang === 'tr' && selectedPost.tagsTr && selectedPost.tagsTr.length > 0
+                ? selectedPost.tagsTr
+                : lang === 'en' && selectedPost.tagsEn && selectedPost.tagsEn.length > 0
+                ? selectedPost.tagsEn
+                : selectedPost.tags || []
+              ).map((tag, i) => (
                 <span key={i} className="text-xs px-2.5 py-1 rounded-lg bg-[#f4eee2] text-[#87641d] font-semibold border border-[#e6ddcc]">
                   #{tag}
                 </span>

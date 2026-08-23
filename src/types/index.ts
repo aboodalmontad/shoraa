@@ -73,6 +73,7 @@ export interface Testimonial {
   rating: number;
   avatar: string;
   caseType: string;
+  caseTypeEn?: string;
   caseTypeTr?: string;
   year: string;
 }
@@ -83,14 +84,18 @@ export interface CaseStudy {
   titleEn: string;
   titleTr?: string;
   category: string;
+  categoryEn?: string;
   categoryTr?: string;
   outcome: string;
+  outcomeEn?: string;
   outcomeTr?: string;
   summary: string;
+  summaryEn?: string;
   summaryTr?: string;
   year: string;
   value?: string;
   highlight: string;
+  highlightEn?: string;
   highlightTr?: string;
 }
 
@@ -100,22 +105,32 @@ export interface BlogPost {
   titleEn: string;
   titleTr?: string;
   slug: string;
+  slugEn?: string;
   slugTr?: string;
   category: string;
+  categoryEn?: string;
   categoryTr?: string;
   excerpt: string;
+  excerptEn?: string;
   excerptTr?: string;
   content: string;
+  contentEn?: string;
   contentTr?: string;
   authorName: string;
+  authorNameEn?: string;
   authorNameTr?: string;
   authorRole: string;
+  authorRoleEn?: string;
   authorRoleTr?: string;
   date: string;
+  dateEn?: string;
+  dateTr?: string;
   readTime: string;
+  readTimeEn?: string;
   readTimeTr?: string;
   image: string;
   tags: string[];
+  tagsEn?: string[];
   tagsTr?: string[];
 }
 

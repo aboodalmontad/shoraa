@@ -11,8 +11,72 @@ const STORAGE_KEYS = {
   SETTINGS: 'aladl_settings_v1',
   OFFICES: 'aladl_offices_v1',
   AUDIT_LOGS: 'aladl_audit_logs_v1',
+  PERSISTENT_BACKUP: 'aladl_persistent_snapshot_v1',
 };
 
+// IndexedDB database configuration for persistent secondary storage
+const IDB_NAME = 'aladl_firm_persistent_db';
+const IDB_VERSION = 1;
+const IDB_STORE = 'app_snapshots';
+
+// Open / initialize IndexedDB
+const openIndexedDB = (): Promise<IDBDatabase | null> => {
+  return new Promise((resolve) => {
+    if (typeof window === 'undefined' || !window.indexedDB) {
+      resolve(null);
+      return;
+    }
+    try {
+      const request = indexedDB.open(IDB_NAME, IDB_VERSION);
+      request.onupgradeneeded = () => {
+        const db = request.result;
+        if (!db.objectStoreNames.contains(IDB_STORE)) {
+          db.createObjectStore(IDB_STORE, { keyPath: 'key' });
+        }
+      };
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => resolve(null);
+    } catch {
+      resolve(null);
+    }
+  });
+};
+
+// Save snapshot to IndexedDB
+const saveSnapshotToIDB = async (snapshot: Record<string, any>) => {
+  try {
+    const db = await openIndexedDB();
+    if (!db) return;
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    const store = tx.objectStore(IDB_STORE);
+    store.put({ key: 'main_backup', data: snapshot, updatedAt: new Date().toISOString() });
+  } catch (e) {
+    console.warn('Could not mirror data to IndexedDB', e);
+  }
+};
+
+// Retrieve snapshot from IndexedDB
+const getSnapshotFromIDB = async (): Promise<Record<string, any> | null> => {
+  try {
+    const db = await openIndexedDB();
+    if (!db) return null;
+    return new Promise((resolve) => {
+      const tx = db.transaction(IDB_STORE, 'readonly');
+      const store = tx.objectStore(IDB_STORE);
+      const req = store.get('main_backup');
+      req.onsuccess = () => {
+        if (req.result && req.result.data) {
+          resolve(req.result.data);
+        } else {
+          resolve(null);
+        }
+      };
+      req.onerror = () => resolve(null);
+    });
+  } catch {
+    return null;
+  }
+};
 
 const notifyChange = () => {
   if (typeof window !== 'undefined') {
@@ -20,9 +84,63 @@ const notifyChange = () => {
   }
 };
 
+// Auto-sync current state to secondary persistence
+const mirrorAllDataToPersistence = () => {
+  if (typeof window === 'undefined') return;
+  try {
+    const snapshot = {
+      partners: storageService.getPartners(),
+      practiceAreas: storageService.getPracticeAreas(),
+      caseStudies: storageService.getCaseStudies(),
+      testimonials: storageService.getTestimonials(),
+      blogPosts: storageService.getBlogPosts(),
+      messages: storageService.getMessages(),
+      settings: storageService.getSettings(),
+      offices: storageService.getOffices(),
+      savedAt: new Date().toISOString(),
+    };
+    saveSnapshotToIDB(snapshot);
+  } catch (e) {
+    console.warn('Failed to mirror data snapshot', e);
+  }
+};
+
 export const storageService = {
-  // Init and seed if empty
+  // Init and seed if empty, with IndexedDB recovery safeguard
   init: () => {
+    if (typeof window === 'undefined') return;
+
+    const hasPartners = !!localStorage.getItem(STORAGE_KEYS.PARTNERS);
+    const hasSettings = !!localStorage.getItem(STORAGE_KEYS.SETTINGS);
+
+    // If localStorage was cleared (e.g. browser cache clear), try restoring from IndexedDB first
+    if (!hasPartners && !hasSettings) {
+      getSnapshotFromIDB().then((backup) => {
+        if (backup && typeof backup === 'object') {
+          if (backup.partners) localStorage.setItem(STORAGE_KEYS.PARTNERS, JSON.stringify(backup.partners));
+          if (backup.practiceAreas) localStorage.setItem(STORAGE_KEYS.PRACTICE_AREAS, JSON.stringify(backup.practiceAreas));
+          if (backup.caseStudies) localStorage.setItem(STORAGE_KEYS.CASE_STUDIES, JSON.stringify(backup.caseStudies));
+          if (backup.testimonials) localStorage.setItem(STORAGE_KEYS.TESTIMONIALS, JSON.stringify(backup.testimonials));
+          if (backup.blogPosts) localStorage.setItem(STORAGE_KEYS.BLOG_POSTS, JSON.stringify(backup.blogPosts));
+          if (backup.messages) localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(backup.messages));
+          if (backup.settings) localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(backup.settings));
+          if (backup.offices) localStorage.setItem(STORAGE_KEYS.OFFICES, JSON.stringify(backup.offices));
+          notifyChange();
+          return;
+        }
+        // If not in IDB either, seed with initialData
+        storageService.seedInitialData();
+      }).catch(() => {
+        storageService.seedInitialData();
+      });
+      return;
+    }
+
+    storageService.seedInitialData();
+    mirrorAllDataToPersistence();
+  },
+
+  seedInitialData: () => {
     if (typeof window === 'undefined') return;
 
     if (!localStorage.getItem(STORAGE_KEYS.PARTNERS)) {
@@ -84,6 +202,7 @@ export const storageService = {
       storageService.logAction('CREATE', 'الشركاء والمحامين (Legal Team)', partner.id, `إضافة ${label} جديد: ${partner.name}`);
     }
     localStorage.setItem(STORAGE_KEYS.PARTNERS, JSON.stringify(updated));
+    mirrorAllDataToPersistence();
     notifyChange();
     return updated;
   },
@@ -95,6 +214,7 @@ export const storageService = {
     const label = isAssociate ? 'المحامي / المستشار' : 'الشريك';
     localStorage.setItem(STORAGE_KEYS.PARTNERS, JSON.stringify(list));
     storageService.logAction('DELETE', 'الشركاء والمحامين (Legal Team)', id, `حذف ${label}: ${partner?.name || id}`);
+    mirrorAllDataToPersistence();
     notifyChange();
     return list;
   },
@@ -129,6 +249,7 @@ export const storageService = {
       storageService.logAction('CREATE', 'الاختصاصات (Practice Areas)', item.id, `إضافة اختصاص جديد: ${item.title}`);
     }
     localStorage.setItem(STORAGE_KEYS.PRACTICE_AREAS, JSON.stringify(updated));
+    mirrorAllDataToPersistence();
     notifyChange();
     return updated;
   },
@@ -138,6 +259,7 @@ export const storageService = {
     const list = storageService.getPracticeAreas().filter(p => p.id !== id);
     localStorage.setItem(STORAGE_KEYS.PRACTICE_AREAS, JSON.stringify(list));
     storageService.logAction('DELETE', 'الاختصاصات (Practice Areas)', id, `حذف الاختصاص: ${item?.title || id}`);
+    mirrorAllDataToPersistence();
     notifyChange();
     return list;
   },
@@ -165,6 +287,7 @@ export const storageService = {
       storageService.logAction('CREATE', 'الإنجازات والقضايا (Case Studies)', item.id, `إضافة قضية جديدة: ${item.title}`);
     }
     localStorage.setItem(STORAGE_KEYS.CASE_STUDIES, JSON.stringify(updated));
+    mirrorAllDataToPersistence();
     notifyChange();
     return updated;
   },
@@ -174,6 +297,7 @@ export const storageService = {
     const list = storageService.getCaseStudies().filter(c => c.id !== id);
     localStorage.setItem(STORAGE_KEYS.CASE_STUDIES, JSON.stringify(list));
     storageService.logAction('DELETE', 'الإنجازات والقضايا (Case Studies)', id, `حذف القضية: ${item?.title || id}`);
+    mirrorAllDataToPersistence();
     notifyChange();
     return list;
   },
@@ -201,6 +325,7 @@ export const storageService = {
       storageService.logAction('CREATE', 'آراء العملاء (Testimonials)', item.id, `إضافة شهادة جديدة: ${item.clientName}`);
     }
     localStorage.setItem(STORAGE_KEYS.TESTIMONIALS, JSON.stringify(updated));
+    mirrorAllDataToPersistence();
     notifyChange();
     return updated;
   },
@@ -210,6 +335,7 @@ export const storageService = {
     const list = storageService.getTestimonials().filter(t => t.id !== id);
     localStorage.setItem(STORAGE_KEYS.TESTIMONIALS, JSON.stringify(list));
     storageService.logAction('DELETE', 'آراء العملاء (Testimonials)', id, `حذف شهادة: ${item?.clientName || id}`);
+    mirrorAllDataToPersistence();
     notifyChange();
     return list;
   },
@@ -237,6 +363,7 @@ export const storageService = {
       storageService.logAction('CREATE', 'المقالات والمدونة (Blog)', post.id, `إضافة مقال جديد: ${post.title}`);
     }
     localStorage.setItem(STORAGE_KEYS.BLOG_POSTS, JSON.stringify(updated));
+    mirrorAllDataToPersistence();
     notifyChange();
     return updated;
   },
@@ -246,6 +373,7 @@ export const storageService = {
     const list = storageService.getBlogPosts().filter(b => b.id !== id);
     localStorage.setItem(STORAGE_KEYS.BLOG_POSTS, JSON.stringify(list));
     storageService.logAction('DELETE', 'المقالات والمدونة (Blog)', id, `حذف المقال: ${item?.title || id}`);
+    mirrorAllDataToPersistence();
     notifyChange();
     return list;
   },
@@ -273,6 +401,7 @@ export const storageService = {
       storageService.logAction('CREATE', 'المقار والفروع (Offices)', office.id, `إضافة مقر جديد: ${office.cityAr}`);
     }
     localStorage.setItem(STORAGE_KEYS.OFFICES, JSON.stringify(updated));
+    mirrorAllDataToPersistence();
     notifyChange();
     return updated;
   },
@@ -282,6 +411,7 @@ export const storageService = {
     const list = storageService.getOffices().filter(o => o.id !== id);
     localStorage.setItem(STORAGE_KEYS.OFFICES, JSON.stringify(list));
     storageService.logAction('DELETE', 'المقار والفروع (Offices)', id, `حذف المقر: ${item?.cityAr || id}`);
+    mirrorAllDataToPersistence();
     notifyChange();
     return list;
   },
@@ -313,6 +443,7 @@ export const storageService = {
     };
     const updated = [newMsg, ...list];
     localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(updated));
+    mirrorAllDataToPersistence();
     notifyChange();
     return newMsg;
   },
@@ -322,6 +453,7 @@ export const storageService = {
     const updated = list.map(m => m.id === id ? { ...m, status, responseNote: responseNote !== undefined ? responseNote : m.responseNote } : m);
     localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(updated));
     storageService.logAction('STATUS_CHANGE', 'رسائل العملاء (Messages)', id, `تحديث حالة الاستشارة إلى: ${status}`);
+    mirrorAllDataToPersistence();
     notifyChange();
     return updated;
   },
@@ -331,6 +463,7 @@ export const storageService = {
     const list = storageService.getMessages().filter(m => m.id !== id);
     localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(list));
     storageService.logAction('DELETE', 'رسائل العملاء (Messages)', id, `حذف استشارة الموكل: ${msg?.fullName || id}`);
+    mirrorAllDataToPersistence();
     notifyChange();
     return list;
   },
@@ -357,6 +490,7 @@ export const storageService = {
   saveSettings: (settings: SiteSettings): SiteSettings => {
     localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
     storageService.logAction('UPDATE', 'إعدادات الموقع (Settings)', 'site-settings', `تحديث إعدادات واسم المكتب: ${settings.firmNameAr}`);
+    mirrorAllDataToPersistence();
     notifyChange();
     return settings;
   },
@@ -418,6 +552,7 @@ export const storageService = {
       if (data.messages) localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(data.messages));
       if (data.settings) localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(data.settings));
       if (data.offices) localStorage.setItem(STORAGE_KEYS.OFFICES, JSON.stringify(data.offices));
+      mirrorAllDataToPersistence();
       notifyChange();
       return true;
     } catch (e) {
@@ -426,7 +561,7 @@ export const storageService = {
     }
   },
 
-  // Reset to initial Seed Data
+  // Reset to initial Seed Data (explicit manual action only)
   resetToDefaults: () => {
     localStorage.setItem(STORAGE_KEYS.PARTNERS, JSON.stringify(initialPartners));
     localStorage.setItem(STORAGE_KEYS.PRACTICE_AREAS, JSON.stringify(initialPracticeAreas));
@@ -436,6 +571,91 @@ export const storageService = {
     localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(initialContactMessages));
     localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(initialSiteSettings));
     localStorage.setItem(STORAGE_KEYS.OFFICES, JSON.stringify(initialOffices));
+    mirrorAllDataToPersistence();
     notifyChange();
+  },
+
+  // Safe Cache Clearing & Application Update:
+  // Preserves 100% of user data, backs it up to IndexedDB, clears runtime browser caches, and refreshes the application.
+  clearCacheAndRefreshApp: async (onStatus?: (msg: string) => void) => {
+    try {
+      if (onStatus) onStatus('جاري تأمين وحفظ البيانات في التخزين الدائم...');
+      
+      // Step 1: Snapshot and preserve all data
+      const currentSnapshot = {
+        partners: storageService.getPartners(),
+        practiceAreas: storageService.getPracticeAreas(),
+        caseStudies: storageService.getCaseStudies(),
+        testimonials: storageService.getTestimonials(),
+        blogPosts: storageService.getBlogPosts(),
+        messages: storageService.getMessages(),
+        settings: storageService.getSettings(),
+        offices: storageService.getOffices(),
+        auditLogs: storageService.getAuditLogs(),
+        savedAt: new Date().toISOString()
+      };
+
+      // Save to IndexedDB and ensure localStorage keys are fresh
+      await saveSnapshotToIDB(currentSnapshot);
+
+      localStorage.setItem(STORAGE_KEYS.PARTNERS, JSON.stringify(currentSnapshot.partners));
+      localStorage.setItem(STORAGE_KEYS.PRACTICE_AREAS, JSON.stringify(currentSnapshot.practiceAreas));
+      localStorage.setItem(STORAGE_KEYS.CASE_STUDIES, JSON.stringify(currentSnapshot.caseStudies));
+      localStorage.setItem(STORAGE_KEYS.TESTIMONIALS, JSON.stringify(currentSnapshot.testimonials));
+      localStorage.setItem(STORAGE_KEYS.BLOG_POSTS, JSON.stringify(currentSnapshot.blogPosts));
+      localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(currentSnapshot.messages));
+      localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(currentSnapshot.settings));
+      localStorage.setItem(STORAGE_KEYS.OFFICES, JSON.stringify(currentSnapshot.offices));
+
+      if (onStatus) onStatus('جاري مسح ملفات الذاكرة المؤقتة (Cache Storage)...');
+
+      // Step 2: Clear Service Worker caches if available
+      if (typeof window !== 'undefined' && 'caches' in window) {
+        try {
+          const cacheKeys = await window.caches.keys();
+          await Promise.all(cacheKeys.map(key => window.caches.delete(key)));
+        } catch (e) {
+          console.warn('Cache storage cleanup non-critical error:', e);
+        }
+      }
+
+      // Step 3: Unregister obsolete service workers if any
+      if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+        try {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          for (const registration of registrations) {
+            await registration.unregister();
+          }
+        } catch (e) {
+          console.warn('Service worker unregister error:', e);
+        }
+      }
+
+      // Step 4: Clear session-level ephemeral data
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.clear();
+      }
+
+      // Step 5: Log audit entry
+      storageService.logAction('STATUS_CHANGE', 'تحديث النظام والكاش', 'system-cache', 'تم مسح ذاكرة التخزين المؤقت وتحديث التطبيق مع الحفاظ الكامل على كافة البيانات');
+
+      if (onStatus) onStatus('تم تأمين البيانات بنجاح! جاري تحديث التطبيق الآن...');
+
+      // Step 6: Hard reload the page
+      setTimeout(() => {
+        if (typeof window !== 'undefined') {
+          window.location.reload();
+        }
+      }, 600);
+
+      return true;
+    } catch (err) {
+      console.error('Error during safe cache refresh:', err);
+      // Fallback reload
+      if (typeof window !== 'undefined') {
+        window.location.reload();
+      }
+      return false;
+    }
   }
 };

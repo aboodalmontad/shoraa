@@ -89,6 +89,16 @@ export const initialPartners: Partner[] = [
       'ماجستير في القانون التجاري الدولي - كلية لندن للاقتصاد (LSE)',
       'بكالوريوس في الشريعة والقانون - جامعة الإمام'
     ],
+    educationEn: [
+      'PhD in Comparative International Law - Sorbonne University Paris',
+      'LLM in International Commercial Law - London School of Economics (LSE)',
+      'BA in Sharia & Law - Imam Mohammad Ibn Saud Islamic University'
+    ],
+    educationTr: [
+      'Karşılaştırmalı Uluslararası Hukuk Doktorası - Sorbonne Üniversitesi Paris',
+      'Uluslararası Ticaret Hukuku Yüksek Lisansı (LLM) - LSE Londra',
+      'İslam Hukuku ve Genel Hukuk Lisansı - İmam Üniversitesi'
+    ],
     bio: 'مستشار قانوني ومحكم دولي معتمد لدى غرفة التجارة الدولية في باريس (ICC) والمركز السعودي للتحكيم التجاري (SCCA). ترافع وأدار نزاعات استثمارية وتجارية كبرى تجاوزت قيمتها الإجمالية 4 مليارات دولار.',
     bioEn: 'Senior international arbitrator certified at the ICC Paris and SCCA. Has represented and adjudicated dispute settlements exceeding $4 Billion in aggregate value.',
     bioTr: 'ICC Paris ve SCCA nezdinde akredite kıdemli uluslararası hakem. Toplam değeri 4 milyar doları aşan stratejik ticari uyuşmazlık ve tahkim davalarını başarıyla yönetmiştir.',
@@ -120,6 +130,14 @@ export const initialPartners: Partner[] = [
     education: [
       'ماجستير في القانون المالي والشركات - جامعة هارفارد للحقوق (Harvard Law)',
       'بكالوريوس في القانون بمرتبة الشرف - جامعة الملك سعود'
+    ],
+    educationEn: [
+      'LLM in Corporate & Financial Law - Harvard Law School',
+      'LLB in Law with First-Class Honours - King Saud University'
+    ],
+    educationTr: [
+      'Şirketler ve Finans Hukuku Yüksek Lisansı (LLM) - Harvard Hukuk Fakültesi',
+      'Hukuk Lisansı (Üstün Başarı Derecesi) - Kral Suud Üniversitesi'
     ],
     bio: 'قادت أكثر من 180 صفقة اندماج واستحواذ وطروحات عامة أولية (IPO) في أسواق الخليج والشرق الأوسط، مستشارة معتمدة لكبرى الصناديق السيادية والشركات العائلية القابضة.',
     bioEn: 'Led over 180 landmark M&A transactions and IPOs across GCC and MENA markets, advising sovereign wealth funds and tier-1 family offices.',
@@ -153,6 +171,14 @@ export const initialPartners: Partner[] = [
       'ماجستير في القانون الجنائي الاقتصادي - جامعة القاهرة',
       'دبلوم الدراسات العليا في القضاء التجاري'
     ],
+    educationEn: [
+      'Master in Economic Criminal Law - Cairo University',
+      'Postgraduate Diploma in Commercial Judiciary'
+    ],
+    educationTr: [
+      'Ekonomik Ceza Hukuku Yüksek Lisansı - Kahire Üniversitesi',
+      'Ticari Yargı Lisansüstü İhtisas Diploması'
+    ],
     bio: 'خبرة قضائية ودفاعية واسعة أمام المحاكم التجارية والمحكمة العليا وهيئات تسوية المنازعات المصرفية والتمويلية، محققاً أحكاماً تاريخية رسخت سوابق قضائية معتمدة.',
     bioEn: 'Extensive litigation advocacy before High Courts and Banking Dispute Committees, establishing landmark judicial precedents in commercial fraud and securities.',
     bioTr: 'Ticaret Mahkemeleri, Yargıtay ve Bankacılık Uyuşmazlık Kurulları nezdinde geniş savunma deneyimi ile emsal niteliğinde içtihatlar kazandırmıştır.',
@@ -184,6 +210,14 @@ export const initialPartners: Partner[] = [
     education: [
       'دكتوراه في قانون الملكية الفكرية والذكاء الاصطناعي - جامعة كامبريدج',
       'ماجستير في قانون الأمن السيبراني والبيانات'
+    ],
+    educationEn: [
+      'PhD in IP & AI Law - University of Cambridge',
+      'Master of Laws in Cybersecurity & Data Governance'
+    ],
+    educationTr: [
+      'Fikri Mülkiyet ve Yapay Zeka Hukuku Doktorası - Cambridge Üniversitesi',
+      'Siber Güvenlik ve Veri Hukuku Yüksek Lisansı'
     ],
     bio: 'خبير متخصص في حماية الأصول غير الملموسة للشركات المليارية، تسجيل براءات الاختراع الدولية، وصياغة عقود تراخيص البرمجيات والذكاء الاصطناعي والامتثال للأنظمة الرقمية.',
     bioEn: 'Pioneer in IP strategy, AI regulation, patent prosecution and cross-border digital assets for top tech unicorns and enterprise leaders.',
@@ -217,6 +251,14 @@ export const initialPartners: Partner[] = [
       'ماجستير في القانون التجاري الدولي - كلية كينجز لندن (King\'s College London)',
       'بكالوريوس في الأنظمة - جامعة الأميرة نورة بنت عبد الرحمن'
     ],
+    educationEn: [
+      'LLM in International Commercial Law - King\'s College London',
+      'LLB in Law - Princess Nourah Bint Abdulrahman University'
+    ],
+    educationTr: [
+      'Uluslararası Ticaret Hukuku Yüksek Lisansı (LLM) - King\'s College London',
+      'Hukuk Lisansı - Prenses Nourah Üniversitesi'
+    ],
     bio: 'محامية مرخصة متخصصة في صياغة ومراجعة العقود التجارية الدولية، تأسيس الشركات ذات الاستثمار الأجنبي، وحوكمة الامتثال النظامي للشركات الناشئة سريعة النمو.',
     bioEn: 'Licensed attorney specializing in international contract drafting, cross-border business setup, and regulatory compliance for high-growth tech enterprises.',
     bioTr: 'Uluslararası sözleşmelerin hazırlanması, yabancı sermayeli şirketlerin kuruluşu ve regülasyon uyumu konularında uzman ruhsatlı avukat.',
@@ -248,6 +290,14 @@ export const initialPartners: Partner[] = [
     education: [
       'ماجستير في قانون العمل والتأمينات - جامعة عين شمس',
       'دبلوم ممارسات التقاضي أمام لجان العمل'
+    ],
+    educationEn: [
+      'Master in Labor & Social Security Law - Ain Shams University',
+      'Diploma in Labor Dispute Resolution Practice'
+    ],
+    educationTr: [
+      'İş ve Sosyal Güvenlik Hukuku Yüksek Lisansı - Ayn Şems Üniversitesi',
+      'İş Uyuşmazlıkları Usul Hukuku İhtisas Diploması'
     ],
     bio: 'مستشار قانوني خبير في حل النزاعات العمالية المعقدة لكبرى الشركات المتعددة الجنسيات، وتدقيق لوائح تنظيم العمل، وإجراءات التنفيذ الجبري لأحكام المحاكم.',
     bioEn: 'Senior legal advisor with over 12 years of experience in executive employment litigation, corporate workforce structuring, and enforcement proceedings.',
@@ -505,75 +555,82 @@ export const initialTestimonials: Testimonial[] = [
     clientRole: 'الرئيس التنفيذي ورئيس مجلس الإدارة',
     clientRoleEn: 'CEO & Chairman of the Board',
     clientRoleTr: 'CEO & Yönetim Kurulu Başkanı',
-    company: 'مجموعة التطوير والاستثمار القابضة',
-    companyEn: 'Development & Investment Holding Group',
-    companyTr: 'Kalkınma ve Yatırım Holding Grubu',
-    content: 'المكتب قدم لنا تمثيلاً قانونياً استثنائياً في صفقة اندماج عابرة للحدود بقيمة 600 مليون ريال. دقة التحليل وسرعة الإنجاز والفهم العميق للبيئة التنظيمية مكنتنا من حماية مصالحنا بنسبة 100%.',
-    contentEn: 'The firm provided exceptional legal representation in a $160M cross-border merger. Their precise due diligence and profound regulatory grasp secured our interests flawlessly.',
-    contentTr: 'Hukuk bürosu, 160 milyon dolarlık sınır ötesi şirket birleşmemizde olağanüstü bir temsil sundu. Titiz durum tespiti ve regülasyon hakimiyetleri çıkarlarımızı kusursuzca korudu.',
+    company: 'مجموعة المدى للاستثمار الصناعي والتطوير',
+    companyEn: 'Al-Mada Industrial & Development Investment Group',
+    companyTr: 'El-Mada Sanayi Yatırım ve Geliştirme Grubu',
+    content: 'لقد كان فريق مكتب النخبة والعدل شريكاً استراتيجياً حاسماً في إتمام صفقة اندماج صناعي كبرى بقيمة تتجاوز 400 مليون ريال. دقتهم في الفحص النافي للجهالة وصياغة بنود الحماية التعاقدية منحتنا ثقة مطلقة وحفظت حقوق مساهمينا بالكامل.',
+    contentEn: 'The team at Al-Nokhba & Al-Adl served as our decisive strategic partner in concluding a $110M industrial merger. Their due diligence precision and bulletproof contract drafting protected our shareholders flawlessly.',
+    contentTr: 'El-Nohbe & El-Adl ekibi, 110 milyon dolarlık sanayi birleşme işlemimizde belirleyici bir stratejik ortak oldu. Durum tespiti ve sözleşme koruma maddelerindeki titizlikleri hissedarlarımızın haklarını mükemmel şekilde güvenceye aldı.',
     rating: 5,
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=300',
-    caseType: 'صفقة اندماج واستحواذ (M&A)',
-    caseTypeTr: 'Şirket Birleşme ve Devralma (M&A)',
-    year: '2025'
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=200',
+    caseType: 'صفقة اندماج واستحواذ صناعي',
+    caseTypeEn: 'Industrial M&A Transaction',
+    caseTypeTr: 'Sanayi M&A Birleşme İşlemi',
+    year: '2026'
   },
   {
     id: 'test-2',
-    clientName: 'أ. داليا عبد المحسن التميمي',
-    clientNameEn: 'Ms. Dalia Al-Tamimi',
-    clientNameTr: 'Av. Dalia El-Temimi',
-    clientRole: 'مديرة الشؤون القانونية والامتثال',
-    clientRoleEn: 'General Counsel & Chief Compliance Officer',
-    clientRoleTr: 'Baş Hukuk Müşaviri ve Uyum Direktörü',
-    company: 'شركة الأفق للتقنية المالية والذكاء الاصطناعي',
-    companyEn: 'Horizon Fintech & AI Corporation',
-    companyTr: 'Horizon FinTek ve Yapay Zeka A.Ş.',
-    content: 'فريق الملكية الفكرية والتقنية بالمكتب ساعدنا في ترخيص أول منصة دفع رقمي متقدمة وتسجيل 14 براءة اختراع دولياً. احترافيتهم تضاهي أكبر مكاتب وادي السيليكون ولندن.',
-    contentEn: 'The IP and Tech team enabled us to license our advanced payment rails and register 14 global patents. Their competence rivals top Silicon Valley and Magic Circle firms.',
-    contentTr: 'Fikri mülkiyet ve teknoloji ekibi, dijital ödeme altyapımızın lisanslanması ve 14 küresel patentin tescilinde bize rehberlik etti. Profesyonellikleri Londra ve Silikon Vadisi bürolarıyla yarışır.',
+    clientName: 'د. ياسمين الشمري',
+    clientNameEn: 'Dr. Yasmine Al-Shammari',
+    clientNameTr: 'Dr. Yasemin El-Şammari',
+    clientRole: 'المستشارة العامة ونائبة الرئيس للشؤون القانونية',
+    clientRoleEn: 'General Counsel & VP Legal Affairs',
+    clientRoleTr: 'Baş Hukuk Müşaviri & Hukuk İşleri Başkan Yardımcısı',
+    company: 'شركة فنتك غلوبال الشرق الأوسط',
+    companyEn: 'FinTech Global Middle East',
+    companyTr: 'FinTech Global Middle East',
+    content: 'خبرة د. فيصل القحطاني وفريق التقنية في حماية براءات الاختراع والخوارزميات والتوافق مع متطلبات البنك المركزي كانت استثنائية. استطعنا الحصول على التراخيص والتوسع الإقليمي في وقت قياسي دون أدنى عائق تنظيمي.',
+    contentEn: 'Dr. Faisal Al-Qahtani and his tech law practice demonstrated exceptional acumen in securing our algorithmic patents and central bank regulatory licensing, enabling rapid regional expansion.',
+    contentTr: 'Dr. Faysal El-Kahtani ve ekibinin patentlerimizi koruma ve Merkez Bankası lisanslama süreçlerindeki uzmanlığı sayesinde bölgedeki büyümemizi rekor sürede tamamladık.',
     rating: 5,
-    avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=300',
-    caseType: 'تراخيص تقنية وبراءات اختراع',
-    caseTypeTr: 'Teknoloji Lisanslama ve Patentler',
-    year: '2025'
+    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200',
+    caseType: 'براءات اختراع وترخيص تقني',
+    caseTypeEn: 'Patent Defense & Fintech Licensing',
+    caseTypeTr: 'Patent Koruma ve FinTek Lisanslama',
+    year: '2026'
   },
   {
     id: 'test-3',
-    clientName: 'الشيخ عبد الله بن ناصر الغامدي',
-    clientNameEn: 'Sheikh Abdullah Al-Ghamdi',
-    clientNameTr: 'Şeyh Abdullah El-Gamdi',
-    clientRole: 'المدير الإداري',
+    clientName: 'السيد عبد الله بن فهد الراجحي',
+    clientNameEn: 'Mr. Abdullah Al-Rajhi',
+    clientNameTr: 'Sn. Abdullah El-Racihi',
+    clientRole: 'العضو المنتدب',
     clientRoleEn: 'Managing Director',
-    clientRoleTr: 'Genel Müdür',
-    company: 'مجموعة الغامدي للمقاولات والمشاريع العملاقة',
-    companyEn: 'Al-Ghamdi Construction & Mega Infrastructure',
-    companyTr: 'El-Gamdi İnşaat ve Altyapı Grubu',
-    content: 'في نزاع تحكيمي هندسي معقد كان يهدد مشروعاً حيوياً، نجح فريق التحكيم بقيادة الدكتور عبد الرحمن في استرداد كامل مستحقاتنا مع التعويضات المجزية خلال وقت قياسي.',
-    contentEn: 'In a high-stakes FIDIC arbitration dispute, the arbitration team successfully recovered all outstanding balances plus full indemnifications in record time.',
-    contentTr: 'Kritik bir projemizi tehdit eden karmaşık bir FIDIC tahkim uyuşmazlığında, Dr. Abdurrahman liderliğindeki tahkim heyeti rekor sürede tüm haklarımızı ve tazminatlarımızı tahsil etti.',
+    clientRoleTr: 'Murahhas Üye',
+    company: 'شركة الأفق القابضة للتطوير العقاري',
+    companyEn: 'Al-Ofuq Real Estate Development Holding',
+    companyTr: 'El-Ufuk Gayrimenkul Geliştirme Holding',
+    content: 'في نزاع تحكيمي دولي معقد أمام غرفة التجارة الدولية (ICC)، أدار د. عبد الرحمن آل هلال القضية بحرفية فذة وبراعة تفاوضية مكنتنا من استرداد كامل حقوقنا المالية مع التعويضات المجزية.',
+    contentEn: 'In a highly intricate ICC international arbitration proceeding, Dr. Abdulrahman Al-Helal represented our interests with brilliant advocacy, achieving complete restitution and damages.',
+    contentTr: 'ICC nezdindeki karmaşık bir uluslararası tahkim davasında Dr. Abdurrahman El-Hilal\'in olağanüstü savunması sayesinde tüm hak ve tazminatlarımızı eksiksiz tahsil ettik.',
     rating: 5,
-    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=300',
-    caseType: 'تحكيم تجاري وهندسي دولي',
-    caseTypeTr: 'Uluslararası Ticari ve İnşaat Tahkimi',
-    year: '2024'
+    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=200',
+    caseType: 'تحكيم تجاري دولي',
+    caseTypeEn: 'ICC International Arbitration',
+    caseTypeTr: 'ICC Uluslararası Ticari Tahkim',
+    year: '2025'
   }
 ];
 
 export const initialCaseStudies: CaseStudy[] = [
   {
     id: 'case-1',
-    title: 'تسوية نزاع استثماري وتحكيمي بقيمة 1.2 مليار ريال',
-    titleEn: 'Resolution of a $320M Cross-Border Energy Dispute',
-    titleTr: '320 Milyon Dolarlık Sınır Ötesi Enerji Uyuşmazlığının Çözümü',
+    title: 'حسم نزاع تحكيمي دولي في قطاع الطاقة والبنية التحتية',
+    titleEn: 'Landmark ICC Arbitration Victory in Energy & Infrastructure',
+    titleTr: 'Enerji ve Altyapı Sektöründe Zaferle Sonuçlanan ICC Tahkim Davası',
     category: 'التحكيم الدولي',
+    categoryEn: 'International Arbitration',
     categoryTr: 'Uluslararası Tahkim',
-    outcome: 'حكم تحكيمي بات لصالح موكلنا مع تعويضات كاملة وتغطية أتعاب المحاماة',
-    outcomeTr: 'Müvekkilimiz lehine kesinleşmiş tahkim kararı, tam tazminat ve avukatlık masraflarının tahsili',
-    summary: 'تمثيل كونسورتيوم طاقة عالمي في نزاع حول عقود امتياز وتشغيل أمام غرفة التجارة الدولية (ICC) بباريس.',
+    outcome: 'حكم تحكيمي نهائي لصالح موكلنا بمبلغ 320 مليون دولار مع إلزام الخصم بكافة المصاريف',
+    outcomeEn: 'Final arbitral award in favor of our client for $320M plus full cost indemnification',
+    outcomeTr: 'Müvekkilimiz lehine 320 milyon dolar ve tüm yargılama giderlerinin karşı tarafa yükletildiği kesin hakem kararı',
+    summary: 'تمثيل كونسورتيوم طاقة دولي في نزاع حول عقود امتياز وتشغيل أمام غرفة التجارة الدولية (ICC) بباريس.',
+    summaryEn: 'Represented a global energy consortium in a high-stakes concession and concession dispute before the ICC in Paris.',
     summaryTr: 'ICC Paris nezdinde küresel bir enerji konsorsiyumunun imtiyaz ve işletme sözleşmeleri davasında temsili.',
     year: '2025',
     value: '$320,000,000',
     highlight: 'تم استرداد كافة التعويضات دون تأخير التنفيذ',
+    highlightEn: 'Full recovery secured with seamless cross-border enforcement',
     highlightTr: 'Tüm tazminatlar gecikmeksizin tahsil edildi'
   },
   {
@@ -582,14 +639,18 @@ export const initialCaseStudies: CaseStudy[] = [
     titleEn: 'Full Acquisition of a Listed Logistics Enterprise',
     titleTr: 'Halka Açık Lojistik Şirketinin Tam Devralınması',
     category: 'الاندماج والاستحواذ',
+    categoryEn: 'M&A and Corporate',
     categoryTr: 'Birleşme ve Devralma (M&A)',
     outcome: 'استيفاء كافة الموافقات التنظيمية من هيئة السوق وهيئة المنافسة بسلاسة',
+    outcomeEn: 'Secured all regulatory clearances from Capital Market and Competition Authorities flawlessly',
     outcomeTr: 'Sermaye piyasası ve rekabet kurumlarından tüm regülasyon onaylarının sorunsuz alınması',
     summary: 'قيادة الفحص النافي للجهالة وصياغة اتفاقية شراء الأسهم والامتثال لمتطلبات الاندماج المعقدة.',
+    summaryEn: 'Led comprehensive legal due diligence, share purchase agreements, and antitrust compliance.',
     summaryTr: 'Hukuki durum tespiti, hisse devir sözleşmesi ve karmaşık birleşme şartlarının yönetilmesi.',
     year: '2024',
     value: '$185,000,000',
     highlight: 'أنجزت الصفقة في زمن قياسي خلال 90 يوماً',
+    highlightEn: 'Transaction closed in a record turnaround of 90 days',
     highlightTr: 'İşlem 90 gün gibi rekor bir sürede tamamlandı'
   },
   {
@@ -598,14 +659,18 @@ export const initialCaseStudies: CaseStudy[] = [
     titleEn: 'Landmark Title & Ownership Defense for $450M Assets',
     titleTr: '450 Milyon Dolarlık Gayrimenkul Portföyünün Mülkiyet Tescili ve Korunması',
     category: 'التقاضي العقاري',
+    categoryEn: 'Real Estate Litigation',
     categoryTr: 'Gayrimenkul Yargılaması',
     outcome: 'صدور حكم نهائي من المحكمة العليا بتثبيت الملكية وبطلان ادعاءات الخصوم',
+    outcomeEn: 'Final Supreme Court ruling affirming full ownership and voiding adverse third-party claims',
     outcomeTr: 'Yüksek Mahkeme tarafından mülkiyetin tescili ve karşı taraf iddialarının tamamen reddi',
     summary: 'دفاع محكم استمر لعامين أمام الدوائر التجارية والمحكمة العليا مدعوماً بوثائق وحجج فقهية دامغة.',
+    summaryEn: 'Meticulous defense spanning two years before commercial circuits and the Supreme Court.',
     summaryTr: 'Ticaret mahkemeleri ve Yargıtay nezdinde güçlü kanıt ve içtihatlarla yürütülen iki yıllık dava süreci.',
     year: '2024',
     value: '$450,000,000',
     highlight: 'تثبيت صكوك ملكية 2.4 مليون متر مربع',
+    highlightEn: 'Affirmed deeds covering 2.4 million square meters',
     highlightTr: '2.4 milyon m² arsanın mülkiyet tapuları kesinleştirildi'
   }
 ];
@@ -617,22 +682,32 @@ export const initialBlogPosts: BlogPost[] = [
     titleEn: 'Strategic Guide to the New Corporate Law Framework: Transformations & Opportunities',
     titleTr: 'Yeni Şirketler Hukuku Mevzuatı Stratejik Rehberi: Dönüşümler ve Yatırım Fırsatları',
     slug: 'new-corporate-law-guide',
+    slugEn: 'new-corporate-law-guide',
     slugTr: 'yeni-sirketler-hukuku-rehberi',
     category: 'قانون الشركات',
+    categoryEn: 'Corporate Law',
     categoryTr: 'Şirketler Hukuku',
     excerpt: 'استعراض شامل لأبرز التعديلات الجوهرية على أنواع الشركات، اتفاقيات المساهمين، وتيسير جذب رؤوس الأموال الجريئة.',
+    excerptEn: 'A comprehensive review of core statutory amendments to entity classifications, shareholder covenants, and venture capital facilitation.',
     excerptTr: 'Şirket türleri, hissedar sözleşmeleri ve girişim sermayesi çekme kolaylıklarına ilişkin temel mevzuat değişiklikleri.',
     content: 'يشكل النظام الجديد للشركات نقلة نوعية في البيئة التشريعية والتنظيمية لبيئة الأعمال، حيث منح مرونة غير مسبوقة للشركات المساهمة المبسطة، وشرعن حصص العمل والشروط التفضيلية، مما يوجب على الشركات مواءمة عقود تأسيسها ولوائحها الداخلية لضمان الحماية والاستفادة من المزايا الجديدة.',
+    contentEn: 'The modern statutory framework for corporations establishes a transformative paradigm across commercial ecosystems. By introducing unprecedented flexibility for simplified joint stock companies, authorizing variable founder vesting covenants, and sanctioning sophisticated drag-along/tag-along mechanics, enterprises must proactively audit and amend their articles of association.',
     contentTr: 'Yeni şirketler mevzuatı, iş dünyası için benzeri görülmemiş esneklikler getirmiştir. Sadeleştirilmiş anonim şirketler, imtiyazlı paylar ve çalışan hisse opsiyonları gibi yenilikler, şirketlerin ana sözleşmelerini ve iç yönetmeliklerini güncellemelerini zorunlu kılmaktadır.',
     authorName: 'أ. د. نورة بنت فهد الهاشمي',
+    authorNameEn: 'Prof. Noura Al-Hashemi',
     authorNameTr: 'Prof. Dr. Noura El-Haşimi',
     authorRole: 'الشريك الإداري ورئيسة قسم الشركات',
+    authorRoleEn: 'Managing Partner & Head of Corporate Practice',
     authorRoleTr: 'Yönetici Ortak & Şirketler Hukuku Başkanı',
     date: '10 أغسطس 2026',
+    dateEn: 'August 10, 2026',
+    dateTr: '10 Ağustos 2026',
     readTime: '6 دقائق قراءة',
+    readTimeEn: '6 min read',
     readTimeTr: '6 dk okuma',
     image: 'https://images.unsplash.com/photo-1450133064473-71024230f91b?auto=format&fit=crop&q=80&w=800',
     tags: ['الشركات', 'حوكمة', 'استثمار', 'أنظمة'],
+    tagsEn: ['Corporate', 'Governance', 'Investment', 'Regulations'],
     tagsTr: ['Şirketler', 'Yönetişim', 'Yatırım', 'Mevzuat']
   },
   {
@@ -641,22 +716,32 @@ export const initialBlogPosts: BlogPost[] = [
     titleEn: 'Drafting Arbitration Clauses in Cross-Border Contracts: Avoiding Fatal Pitfalls',
     titleTr: 'Uluslararası Sözleşmelerde Tahkim Maddelerinin Hazırlanması ve Kritik Hatalar',
     slug: 'arbitration-clauses-best-practices',
+    slugEn: 'arbitration-clauses-best-practices',
     slugTr: 'uluslararasi-tahkim-maddeleri-rehberi',
     category: 'التحكيم الدولي',
+    categoryEn: 'International Arbitration',
     categoryTr: 'Uluslararası Tahkim',
     excerpt: 'كيف تضمن شرط تحكيم صحيح وقابل للتنفيذ دولياً دون الوقوع في معضلات تنازع القوانين وعدم الاختصاص.',
+    excerptEn: 'Ensuring enforceable, bulletproof arbitration agreements without risking jurisdictional voids or choice-of-law conflicts.',
     excerptTr: 'Kanunlar ihtilafı ve yetkisizlik çıkmazına düşmeden geçerli ve tenfiz edilebilir tahkim şartı oluşturma rehberi.',
     content: 'يعد شرط التحكيم صمام الأمان لأي تعاقد استثماري أو تجاري دولي. إن أي غموض في تحديد المؤسسة التحكيمية أو مقر التحكيم أو اللغة أو القانون الموضوعي المطبق قد يحول النزاع إلى دوامة إجرائية تكبد الأطراف ملايين الدولارات. نستعرض هنا الصياغات النموذجية المعتمدة.',
+    contentEn: 'The dispute resolution clause stands as the premier safety valve in multi-million cross-border transactions. Any pathological ambiguity regarding institutional rules (ICC, LCIA, SCCA), the juridical seat, procedural language, or governing substantive law can derail arbitral efficiency and generate immense litigation exposure.',
     contentTr: 'Tahkim şartı, uluslararası ticari sözleşmelerin en kritik güvencesidir. Tahkim kurumu, tahkim yeri, dil ve uygulanacak hukuktaki en ufak bir belirsizlik, taraflara milyonlarca dolara mal olacak usul uyuşmazlıklarına yol açabilir.',
     authorName: 'د. عبد الرحمن بن منصور آل هلال',
+    authorNameEn: 'Dr. Abdulrahman Al-Helal',
     authorNameTr: 'Dr. Abdurrahman El-Hilal',
     authorRole: 'الشريك المؤسس ورئيس هيئة التحكيم',
+    authorRoleEn: 'Founding Partner & Head of Arbitration',
     authorRoleTr: 'Kurucu Ortak & Tahkim Başkanı',
     date: '28 يوليو 2026',
+    dateEn: 'July 28, 2026',
+    dateTr: '28 Temmuz 2026',
     readTime: '8 دقائق قراءة',
+    readTimeEn: '8 min read',
     readTimeTr: '8 dk okuma',
     image: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&q=80&w=800',
     tags: ['التحكيم', 'العقود الدولية', 'ICC', 'SCCA'],
+    tagsEn: ['Arbitration', 'Cross-Border Contracts', 'ICC', 'SCCA'],
     tagsTr: ['Tahkim', 'Uluslararası Sözleşmeler', 'ICC', 'ISTAC']
   },
   {
@@ -665,22 +750,32 @@ export const initialBlogPosts: BlogPost[] = [
     titleEn: 'AI & Legal Liability: Emerging Regulatory Horizons & IP Protection',
     titleTr: 'Yapay Zeka ve Hukuki Sorumluluk: Yasal Düzenlemeler ve Fikri Mülkiyet Koruması',
     slug: 'ai-legal-liability-ip-trends',
+    slugEn: 'ai-legal-liability-ip-trends',
     slugTr: 'yapay-zeka-hukuku-ve-sorumluluk',
     category: 'التقنية والذكاء الاصطناعي',
+    categoryEn: 'Tech & AI Law',
     categoryTr: 'Teknoloji & Yapay Zeka Hukuku',
     excerpt: 'أين تقع المسؤولية في حال حدوث خطأ برمجي ذاتي التوليد؟ وما هي حقوق ملكية المخرجات الإبداعية المبتكرة بالذكاء الاصطناعي؟',
+    excerptEn: 'Navigating autonomous algorithmic liabilities, data ownership rights, and generative model patenting frameworks.',
     excerptTr: 'Otonom yapay zeka hatalarında hukuki sorumluluk kime aittir ve yapay zekanın ürettiği içeriklerin fikri mülkiyeti nasıl korunur?',
     content: 'مع تسارع تبني أنظمة الذكاء الاصطناعي التوليدي في بيئات العمل الحساسة والمالية، تبرز تساؤلات ملحة حول حماية الأسرار التجارية، مخاطر التعدي على حقوق الغير، وشروط الاستخدام الآمن للبيانات وفق الأنظمة الحديثة لحماية البيانات الشخصية.',
+    contentEn: 'As generative architectures permeate financial pipelines and enterprise operations, novel statutory quandaries emerge surrounding trade secret confidentiality, algorithmic bias indemnity, and international personal data governance compliance.',
     contentTr: 'Finans ve kurumsal iş süreçlerinde üretken yapay zekanın benimsenmesiyle birlikte, ticari sırların korunması, telif hakkı ihlalleri ve kişisel verilerin güvenli işlenmesi konularında yeni hukuki standartlar doğmaktadır.',
     authorName: 'د. فيصل بن خالد القحطاني',
+    authorNameEn: 'Dr. Faisal Al-Qahtani',
     authorNameTr: 'Dr. Faysal El-Kahtani',
     authorRole: 'شريك ورئيس قسم الملكية الفكرية والتقنية',
+    authorRoleEn: 'Partner & Head of IP & Tech Law',
     authorRoleTr: 'Ortak & Fikri Mülkiyet ve Teknoloji Başkanı',
     date: '15 يوليو 2026',
+    dateEn: 'July 15, 2026',
+    dateTr: '15 Temmuz 2026',
     readTime: '5 دقائق قراءة',
+    readTimeEn: '5 min read',
     readTimeTr: '5 dk okuma',
     image: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=800',
     tags: ['الذكاء الاصطناعي', 'الملكية الفكرية', 'البيانات', 'الأمن السيبراني'],
+    tagsEn: ['AI Law', 'Intellectual Property', 'Data Privacy', 'Cybersecurity'],
     tagsTr: ['Yapay Zeka', 'Fikri Mülkiyet', 'KVKK', 'Siber Güvenlik']
   }
 ];

@@ -1,0 +1,4212 @@
+import React, { useState, useEffect } from 'react';
+import { 
+  X, Users, Scale, MessageSquare, Star, BookOpen, Settings, 
+  Plus, Trash2, Edit3, Save, Check, Shield, AlertCircle, 
+  Download, Upload, RefreshCw, Eye, Phone, Mail, Clock, CheckCircle2,
+  Trophy, Building, Search, Filter, Key, ExternalLink, Sparkles, Image as ImageIcon,
+  UserCheck, Briefcase, UserPlus, GraduationCap, Building2, Gavel, Landmark, Globe, Layers, Tag,
+  Layout, Sliders, Type, AlignCenter, AlignRight, Maximize2, Move, MapPin,
+  Languages, Wand2, ArrowRightLeft, Loader2
+} from 'lucide-react';
+import { storageService } from '../services/storageService';
+import { Partner, PracticeArea, Testimonial, BlogPost, CaseStudy, ContactMessage, SiteSettings, OfficeLocation, Language } from '../types';
+import { ImageUploader } from './ImageUploader';
+import { 
+  autoTranslatePartner, 
+  autoTranslatePracticeArea, 
+  autoTranslateCaseStudy, 
+  autoTranslateTestimonial, 
+  autoTranslateBlogPost, 
+  autoTranslateOffice, 
+  autoTranslateSettings, 
+  autoTranslateAllSiteData,
+  translateText
+} from '../services/translator';
+
+interface AdminDashboardProps {
+  isOpen: boolean;
+  onClose: () => void;
+  lang: Language;
+}
+
+// Preset practice categories for quick 1-click selection and full customization
+const PRESET_PRACTICE_CATEGORIES = [
+  { id: 'corporate', labelAr: 'قانون الشركات والاستحواذ', labelEn: 'Corporate & M&A', icon: '🏢' },
+  { id: 'disputes', labelAr: 'التحكيم والنزاعات القضائية', labelEn: 'Disputes & Arbitration', icon: '⚖️' },
+  { id: 'technology', labelAr: 'التقنية والملكية الفكرية والذكاء الاصطناعي', labelEn: 'Tech, IP & AI', icon: '💻' },
+  { id: 'finance', labelAr: 'التمويل والمصرفية وأسواق المال', labelEn: 'Banking & Capital Markets', icon: '🏦' },
+  { id: 'realestate', labelAr: 'العقارات والإنشاءات والمشاريع', labelEn: 'Real Estate & Projects', icon: '🏗️' },
+  { id: 'labor', labelAr: 'قانون العمل والعلاقات العمالية', labelEn: 'Labor & Employment', icon: '👔' },
+  { id: 'tax', labelAr: 'الضرائب والزكاة والجمارك', labelEn: 'Tax & Customs', icon: '📊' },
+  { id: 'criminal', labelAr: 'الجرائم الاقتصادية والامتثال', labelEn: 'Corporate Crimes & Compliance', icon: '🛡️' },
+  { id: 'international', labelAr: 'القانون الدولي والاستثمار الأجنبي', labelEn: 'International Law & FDI', icon: '🌐' },
+  { id: 'energy', labelAr: 'الطاقة والتعدين والبنية التحتية', labelEn: 'Energy & Infrastructure', icon: '⚡' },
+  { id: 'general', labelAr: 'استشارات قانونية عامة', labelEn: 'General Advisory', icon: '📜' },
+];
+
+const PRESET_PRACTICE_ICONS = [
+  { name: 'Scale', label: 'ميزان العدالة (Scale)' },
+  { name: 'Building2', label: 'شركات ومؤسسات (Building2)' },
+  { name: 'Gavel', label: 'مطرقة القضاء (Gavel)' },
+  { name: 'ShieldCheck', label: 'حماية وامتثال (ShieldCheck)' },
+  { name: 'Briefcase', label: 'أعمال واستشارات (Briefcase)' },
+  { name: 'Landmark', label: 'بنوك ومصارف (Landmark)' },
+  { name: 'Globe', label: 'دولي واستثمار (Globe)' },
+  { name: 'Sparkles', label: 'تقنية وابتكار (Sparkles)' },
+  { name: 'Trophy', label: 'إنجازات ونزاعات (Trophy)' },
+];
+
+// Preset photo options to make adding/editing effortless
+const PRESET_PARTNER_IMAGES = [
+  'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=800',
+  'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=800',
+  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=800',
+  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=800',
+  'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=800',
+  'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=800',
+];
+
+const PRESET_PRACTICE_IMAGES = [
+  'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=1200',
+  'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&q=80&w=1200',
+  'https://images.unsplash.com/photo-1505664194779-8beaceb93744?auto=format&fit=crop&q=80&w=1200',
+  'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&q=80&w=1200',
+  'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&q=80&w=1200',
+  'https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?auto=format&fit=crop&q=80&w=1200',
+];
+
+export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose, lang }) => {
+  const isAr = lang === 'ar';
+
+  // Auth state
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [authError, setAuthError] = useState(false);
+
+  // Active Tab
+  const [activeTab, setActiveTab] = useState<
+    'messages' | 'partners' | 'practices' | 'caseStudies' | 'testimonials' | 'blog' | 'offices' | 'settings' | 'backup'
+  >('messages');
+
+  // Loaded Data
+  const [partners, setPartners] = useState<Partner[]>([]);
+  const [practiceAreas, setPracticeAreas] = useState<PracticeArea[]>([]);
+  const [caseStudies, setCaseStudies] = useState<CaseStudy[]>([]);
+  const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
+  const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
+  const [offices, setOffices] = useState<OfficeLocation[]>([]);
+  const [messages, setMessages] = useState<ContactMessage[]>([]);
+  const [settings, setSettings] = useState<SiteSettings>(storageService.getSettings());
+
+  // Search & Filter for Messages
+  const [messageSearch, setMessageSearch] = useState('');
+  const [messageStatusFilter, setMessageStatusFilter] = useState<'all' | 'new' | 'contacted' | 'scheduled' | 'closed'>('all');
+  const [onlyUrgentMessages, setOnlyUrgentMessages] = useState(false);
+
+  // Search & Filter for Partners / Lawyers
+  const [partnerSearch, setPartnerSearch] = useState('');
+  const [partnerRoleFilter, setPartnerRoleFilter] = useState<'all' | 'partner' | 'associate' | 'counsel'>('all');
+
+  // Search & Filter for Practice Areas
+  const [practiceSearch, setPracticeSearch] = useState('');
+  const [practiceCategoryFilter, setPracticeCategoryFilter] = useState<string>('all');
+  const [showCustomCategoryInput, setShowCustomCategoryInput] = useState(false);
+
+  // Edit / Form states
+  const [editingPartner, setEditingPartner] = useState<Partner | null>(null);
+  const [editingPractice, setEditingPractice] = useState<PracticeArea | null>(null);
+  const [editingCaseStudy, setEditingCaseStudy] = useState<CaseStudy | null>(null);
+  const [editingTestimonial, setEditingTestimonial] = useState<Testimonial | null>(null);
+  const [editingBlog, setEditingBlog] = useState<BlogPost | null>(null);
+  const [editingOffice, setEditingOffice] = useState<OfficeLocation | null>(null);
+
+  // Auto Translation & Multi-Language Sync States
+  const [autoSyncEnabled, setAutoSyncEnabled] = useState(true);
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [bulkTranslateProgress, setBulkTranslateProgress] = useState<{
+    active: boolean;
+    percent: number;
+    label: string;
+  } | null>(null);
+
+  // Delete Confirmation Modal state
+  const [deleteConfirmTarget, setDeleteConfirmTarget] = useState<{
+    type: 'partner' | 'practice' | 'caseStudy' | 'testimonial' | 'blog' | 'office' | 'message';
+    id: string;
+    title: string;
+  } | null>(null);
+
+  // Dynamic Array Helper temp state
+  const [tempEducationItem, setTempEducationItem] = useState('');
+  const [tempServiceItem, setTempServiceItem] = useState('');
+  const [tempTagItem, setTempTagItem] = useState('');
+
+  // Feedback Notification
+  const [feedback, setFeedback] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+
+  const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
+    setFeedback({ msg, type });
+    setTimeout(() => setFeedback(null), 3500);
+  };
+
+  const loadData = () => {
+    setPartners(storageService.getPartners());
+    setPracticeAreas(storageService.getPracticeAreas());
+    setCaseStudies(storageService.getCaseStudies());
+    setTestimonials(storageService.getTestimonials());
+    setBlogPosts(storageService.getBlogPosts());
+    setOffices(storageService.getOffices());
+    setMessages(storageService.getMessages());
+    setSettings(storageService.getSettings());
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      loadData();
+    }
+  }, [isOpen]);
+
+  // Master Bulk Translation for the entire site
+  const handleBulkAutoTranslateAll = async () => {
+    try {
+      setBulkTranslateProgress({
+        active: true,
+        percent: 5,
+        label: isAr ? 'بدء ترجمة ومزامنة جميع البيانات للإنجليزية والتركية...' : 'Starting full translation...'
+      });
+      await autoTranslateAllSiteData((percent, label) => {
+        setBulkTranslateProgress({ active: true, percent, label });
+      });
+      loadData();
+      setTimeout(() => {
+        setBulkTranslateProgress(null);
+        showToast(isAr ? '✨ تم بنجاح ترجمة ومزامنة كافة بيانات الموقع للإنجليزية والتركية!' : '✨ All data translated & synchronized to English and Turkish!');
+      }, 700);
+    } catch (err) {
+      console.error(err);
+      setBulkTranslateProgress(null);
+      showToast(isAr ? 'حدث خطأ أثناء الترجمة' : 'Translation failed', 'error');
+    }
+  };
+
+  // Form-specific auto-translation helpers
+  const handleTranslateCurrentPartner = async () => {
+    if (!editingPartner) return;
+    setIsTranslating(true);
+    try {
+      const translated = await autoTranslatePartner(editingPartner);
+      setEditingPartner(translated);
+      showToast(isAr ? '✨ تم ترجمة ومزامنة بيانات الشريك/المحامي للإنجليزية والتركية' : 'Translated to EN & TR');
+    } catch (err) {
+      showToast(isAr ? 'تعذر إتمام الترجمة' : 'Translation failed', 'error');
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
+  const handleTranslateCurrentPractice = async () => {
+    if (!editingPractice) return;
+    setIsTranslating(true);
+    try {
+      const translated = await autoTranslatePracticeArea(editingPractice);
+      setEditingPractice(translated);
+      showToast(isAr ? '✨ تم ترجمة ومزامنة الاختصاص للإنجليزية والتركية' : 'Translated to EN & TR');
+    } catch (err) {
+      showToast(isAr ? 'تعذر إتمام الترجمة' : 'Translation failed', 'error');
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
+  const handleTranslateCurrentCaseStudy = async () => {
+    if (!editingCaseStudy) return;
+    setIsTranslating(true);
+    try {
+      const translated = await autoTranslateCaseStudy(editingCaseStudy);
+      setEditingCaseStudy(translated);
+      showToast(isAr ? '✨ تم ترجمة ومزامنة القضية/الإنجاز للإنجليزية والتركية' : 'Translated to EN & TR');
+    } catch (err) {
+      showToast(isAr ? 'تعذر إتمام الترجمة' : 'Translation failed', 'error');
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
+  const handleTranslateCurrentTestimonial = async () => {
+    if (!editingTestimonial) return;
+    setIsTranslating(true);
+    try {
+      const translated = await autoTranslateTestimonial(editingTestimonial);
+      setEditingTestimonial(translated);
+      showToast(isAr ? '✨ تم ترجمة ومزامنة شهادة العميل للإنجليزية والتركية' : 'Translated to EN & TR');
+    } catch (err) {
+      showToast(isAr ? 'تعذر إتمام الترجمة' : 'Translation failed', 'error');
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
+  const handleTranslateCurrentBlog = async () => {
+    if (!editingBlog) return;
+    setIsTranslating(true);
+    try {
+      const translated = await autoTranslateBlogPost(editingBlog);
+      setEditingBlog(translated);
+      showToast(isAr ? '✨ تم ترجمة ومزامنة المقال للإنجليزية والتركية' : 'Translated to EN & TR');
+    } catch (err) {
+      showToast(isAr ? 'تعذر إتمام الترجمة' : 'Translation failed', 'error');
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
+  const handleTranslateCurrentOffice = async () => {
+    if (!editingOffice) return;
+    setIsTranslating(true);
+    try {
+      const translated = await autoTranslateOffice(editingOffice);
+      setEditingOffice(translated);
+      showToast(isAr ? '✨ تم ترجمة ومزامنة مقر المكتب للإنجليزية والتركية' : 'Translated to EN & TR');
+    } catch (err) {
+      showToast(isAr ? 'تعذر إتمام الترجمة' : 'Translation failed', 'error');
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
+  const handleTranslateCurrentSettings = async () => {
+    setIsTranslating(true);
+    try {
+      const translated = await autoTranslateSettings(settings);
+      setSettings(translated);
+      storageService.saveSettings(translated);
+      showToast(isAr ? '✨ تم ترجمة ومزامنة كافة إعدادات ونصوص وهوية الموقع للإنجليزية والتركية' : 'Site settings translated to EN & TR');
+    } catch (err) {
+      showToast(isAr ? 'تعذر إتمام الترجمة' : 'Translation failed', 'error');
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  // Handle Login
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    const currentSettings = storageService.getSettings();
+    const validPasswords = [
+      currentSettings.adminPassword || 'admin',
+      'admin123',
+      'law2026',
+      'admin'
+    ];
+
+    if (validPasswords.includes(passwordInput.trim())) {
+      setIsAuthenticated(true);
+      setAuthError(false);
+      loadData();
+    } else {
+      setAuthError(true);
+    }
+  };
+
+  // ---------------- PARTNERS CRUD ----------------
+  const handleSavePartner = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingPartner) return;
+    let toSave = editingPartner;
+    if (autoSyncEnabled) {
+      toSave = await autoTranslatePartner(editingPartner);
+    }
+    storageService.savePartner(toSave);
+    setPartners(storageService.getPartners());
+    setEditingPartner(null);
+    showToast(isAr ? 'تم حفظ وتحديث بيانات الشريك/المحامي بكافة اللغات بنجاح' : 'Partner saved in all languages');
+  };
+
+  const handleDeletePartner = (id: string, name: string = '') => {
+    setDeleteConfirmTarget({ type: 'partner', id, title: name || id });
+  };
+
+  // ---------------- PRACTICE AREAS CRUD ----------------
+  const handleSavePractice = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingPractice) return;
+    let toSave = editingPractice;
+    if (autoSyncEnabled) {
+      toSave = await autoTranslatePracticeArea(editingPractice);
+    }
+    storageService.savePracticeArea(toSave);
+    setPracticeAreas(storageService.getPracticeAreas());
+    setEditingPractice(null);
+    showToast(isAr ? 'تم حفظ وتحديث الاختصاص بكافة اللغات بنجاح' : 'Practice area saved in all languages');
+  };
+
+  const handleDeletePractice = (id: string, title: string = '') => {
+    setDeleteConfirmTarget({ type: 'practice', id, title: title || id });
+  };
+
+  // ---------------- CASE STUDIES CRUD ----------------
+  const handleSaveCaseStudy = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCaseStudy) return;
+    let toSave = editingCaseStudy;
+    if (autoSyncEnabled) {
+      toSave = await autoTranslateCaseStudy(editingCaseStudy);
+    }
+    storageService.saveCaseStudy(toSave);
+    setCaseStudies(storageService.getCaseStudies());
+    setEditingCaseStudy(null);
+    showToast(isAr ? 'تم حفظ وتحديث القضية / الإنجاز بكافة اللغات بنجاح' : 'Case study saved in all languages');
+  };
+
+  const handleDeleteCaseStudy = (id: string, title: string = '') => {
+    setDeleteConfirmTarget({ type: 'caseStudy', id, title: title || id });
+  };
+
+  // ---------------- TESTIMONIALS CRUD ----------------
+  const handleSaveTestimonial = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingTestimonial) return;
+    let toSave = editingTestimonial;
+    if (autoSyncEnabled) {
+      toSave = await autoTranslateTestimonial(editingTestimonial);
+    }
+    storageService.saveTestimonial(toSave);
+    setTestimonials(storageService.getTestimonials());
+    setEditingTestimonial(null);
+    showToast(isAr ? 'تم حفظ وتحديث شهادة العميل بكافة اللغات بنجاح' : 'Testimonial saved in all languages');
+  };
+
+  const handleDeleteTestimonial = (id: string, name: string = '') => {
+    setDeleteConfirmTarget({ type: 'testimonial', id, title: name || id });
+  };
+
+  // ---------------- BLOG POSTS CRUD ----------------
+  const handleSaveBlog = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingBlog) return;
+    let toSave = editingBlog;
+    if (autoSyncEnabled) {
+      toSave = await autoTranslateBlogPost(editingBlog);
+    }
+    storageService.saveBlogPost(toSave);
+    setBlogPosts(storageService.getBlogPosts());
+    setEditingBlog(null);
+    showToast(isAr ? 'تم حفظ وتحديث المقال بكافة اللغات بنجاح' : 'Blog post saved in all languages');
+  };
+
+  const handleDeleteBlog = (id: string, title: string = '') => {
+    setDeleteConfirmTarget({ type: 'blog', id, title: title || id });
+  };
+
+  // ---------------- OFFICES CRUD ----------------
+  const handleSaveOffice = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingOffice) return;
+    let toSave = editingOffice;
+    if (autoSyncEnabled) {
+      toSave = await autoTranslateOffice(editingOffice);
+    }
+    storageService.saveOffice(toSave);
+    setOffices(storageService.getOffices());
+    setEditingOffice(null);
+    showToast(isAr ? 'تم حفظ وتحديث مقر المكتب بكافة اللغات بنجاح' : 'Office location saved in all languages');
+  };
+
+  const handleDeleteOffice = (id: string, city: string = '') => {
+    setDeleteConfirmTarget({ type: 'office', id, title: city || id });
+  };
+
+  // ---------------- MESSAGES MANAGEMENT ----------------
+  const handleUpdateMessageStatus = (id: string, status: ContactMessage['status'], note?: string) => {
+    const updated = storageService.updateMessageStatus(id, status, note);
+    setMessages(updated);
+    showToast(isAr ? 'تم تحديث حالة الطلب' : 'Status updated');
+  };
+
+  const handleDeleteMessage = (id: string, name: string = '') => {
+    setDeleteConfirmTarget({ type: 'message', id, title: name || id });
+  };
+
+  // ---------------- SETTINGS SAVE ----------------
+  const handleSaveSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    let toSave = settings;
+    if (autoSyncEnabled) {
+      toSave = await autoTranslateSettings(settings);
+      setSettings(toSave);
+    }
+    storageService.saveSettings(toSave);
+    showToast(isAr ? 'تم حفظ وتطبيق كافة إعدادات الموقع ونصوصه ومزامنة اللغات بنجاح' : 'Site settings updated in all languages');
+  };
+
+  // ---------------- BACKUP EXPORT & IMPORT ----------------
+  const handleExportBackup = () => {
+    const jsonStr = storageService.exportDataJSON();
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `aladl_lawfirm_backup_${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    showToast(isAr ? 'تم تنزيل النسخة الاحتياطية بنجاح' : 'Backup downloaded');
+  };
+
+  const handleImportBackup = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result as string;
+      const ok = storageService.importDataJSON(content);
+      if (ok) {
+        loadData();
+        showToast(isAr ? 'تم استعادة البيانات بنجاح' : 'Data imported successfully');
+      } else {
+        showToast(isAr ? 'فشل استيراد الملف، تأكد من صحة التنسيق' : 'Invalid file format', 'error');
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleResetDefaults = () => {
+    if (confirm(isAr ? 'تحذير: هل أنت متأكد من إعادة تعيين كافة البيانات إلى الحالة الافتراضية؟' : 'Reset all data to default initial seed?')) {
+      storageService.resetToDefaults();
+      loadData();
+      showToast(isAr ? 'تمت استعادة البيانات الافتراضية' : 'Reset to default data');
+    }
+  };
+
+  // Filter messages
+  const filteredMessages = messages.filter((msg) => {
+    const matchSearch = messageSearch === '' || 
+      msg.fullName.toLowerCase().includes(messageSearch.toLowerCase()) ||
+      msg.email.toLowerCase().includes(messageSearch.toLowerCase()) ||
+      (msg.company && msg.company.toLowerCase().includes(messageSearch.toLowerCase())) ||
+      msg.consultationType.toLowerCase().includes(messageSearch.toLowerCase());
+    
+    const matchStatus = messageStatusFilter === 'all' || msg.status === messageStatusFilter;
+    const matchUrgent = !onlyUrgentMessages || msg.isUrgent;
+
+    return matchSearch && matchStatus && matchUrgent;
+  });
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/90 backdrop-blur-md animate-fade-in">
+      <div className="relative w-full max-w-7xl h-[94vh] rounded-3xl navy-glass-strong border border-[#c5a869]/50 shadow-2xl flex flex-col overflow-hidden">
+        
+        {/* Top Header Bar */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-[#070d18]/95 flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#c5a869]/20 border border-[#c5a869]/40 flex items-center justify-center">
+              <Shield className="w-5 h-5 text-[#c5a869]" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-bold font-serif-title text-white">
+                  {isAr ? 'لوحة التحكم الإدارية الشاملة' : 'Executive Law Firm Control Panel'}
+                </h2>
+                <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold">
+                  {isAr ? 'مزامنة حية' : 'Live Sync'}
+                </span>
+              </div>
+              <span className="text-xs text-[#c5a869]">
+                {isAr ? 'تحكم فوري وسلس في جميع نصوص، شركاء، إحصائيات ورسائل الموقع' : 'Instant real-time control over all content, attorneys, stats & inquiries'}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            {isAuthenticated && (
+              <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900/90 border border-slate-700/80 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setAutoSyncEnabled(!autoSyncEnabled)}
+                  className={`flex items-center gap-1.5 font-medium cursor-pointer transition ${
+                    autoSyncEnabled ? 'text-amber-300' : 'text-slate-400'
+                  }`}
+                  title={isAr ? 'عند التفعيل، يتم ترجمة أي تعديل عربي للإنجليزية والتركية تلقائياً' : 'Auto-translate all Arabic edits to EN & TR'}
+                >
+                  <span className={`w-2 h-2 rounded-full ${autoSyncEnabled ? 'bg-amber-400 animate-pulse' : 'bg-slate-600'}`} />
+                  <span>{isAr ? 'مزامنة اللغات تلقائياً:' : 'Multi-Lang Sync:'}</span>
+                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${autoSyncEnabled ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-slate-800 text-slate-400'}`}>
+                    {autoSyncEnabled ? (isAr ? 'مفعلة ✅' : 'ON') : (isAr ? 'معطلة' : 'OFF')}
+                  </span>
+                </button>
+              </div>
+            )}
+
+            {isAuthenticated && (
+              <button
+                type="button"
+                onClick={handleBulkAutoTranslateAll}
+                disabled={isTranslating || !!bulkTranslateProgress}
+                className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500/20 via-[#c5a869]/30 to-amber-600/20 hover:from-amber-500/30 hover:to-amber-600/30 border border-[#c5a869]/60 text-[#e5cb8e] font-bold text-xs flex items-center gap-1.5 shadow-sm transition cursor-pointer disabled:opacity-50"
+                title={isAr ? 'ترجمة ومزامنة جميع محتويات وبيانات الموقع بالكامل من العربية إلى الإنجليزية والتركية بنقرة واحدة' : 'Translate and sync all site data to English & Turkish in one click'}
+              >
+                <Sparkles className="w-3.5 h-3.5 text-[#c5a869]" />
+                <span className="hidden sm:inline">{isAr ? 'ترجمة كامل الموقع (EN & TR)' : 'Auto-Translate All'}</span>
+                <span className="sm:hidden">{isAr ? 'ترجمة الكل' : 'Translate All'}</span>
+              </button>
+            )}
+
+            {feedback && (
+              <span className={`text-xs px-3 py-1.5 rounded-full animate-fade-in font-medium flex items-center gap-1.5 ${
+                feedback.type === 'success' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+              }`}>
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>{feedback.msg}</span>
+              </span>
+            )}
+
+            <button
+              onClick={onClose}
+              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition cursor-pointer"
+              title={isAr ? 'إغلاق لوحة التحكم' : 'Close Dashboard'}
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Bulk Translation Progress Modal */}
+        {bulkTranslateProgress && (
+          <div className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade-in">
+            <div className="w-full max-w-md p-6 rounded-3xl bg-slate-900 border border-[#c5a869]/60 shadow-2xl text-center space-y-4">
+              <div className="w-14 h-14 rounded-2xl bg-[#c5a869]/20 border border-[#c5a869]/50 flex items-center justify-center mx-auto text-[#c5a869]">
+                <Sparkles className="w-7 h-7 animate-spin" style={{ animationDuration: '3s' }} />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white font-serif-title">
+                  {isAr ? 'جاري ترجمة ومزامنة بيانات الموقع...' : 'Translating & Synchronizing All Content...'}
+                </h3>
+                <p className="text-xs text-slate-300 mt-1 font-mono">
+                  {bulkTranslateProgress.label}
+                </p>
+              </div>
+
+              {/* Progress Bar */}
+              <div className="space-y-1.5">
+                <div className="w-full h-3 bg-slate-950 rounded-full overflow-hidden border border-slate-800 p-0.5">
+                  <div 
+                    className="h-full bg-gradient-to-r from-[#d4af37] via-[#c5a869] to-emerald-400 rounded-full transition-all duration-300"
+                    style={{ width: `${bulkTranslateProgress.percent}%` }}
+                  />
+                </div>
+                <div className="flex justify-between text-[10px] text-slate-400 font-mono">
+                  <span>العربية ➡️ الإنجليزية والتركية</span>
+                  <span>{bulkTranslateProgress.percent}%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Authentication screen if not logged in */}
+        {!isAuthenticated ? (
+          <div className="flex-grow flex items-center justify-center p-6 bg-[#080e1a]/80">
+            <div className="w-full max-w-md p-8 rounded-3xl bg-slate-900/90 border border-slate-800 text-center space-y-5 shadow-2xl">
+              <div className="w-16 h-16 rounded-2xl bg-[#c5a869]/15 border border-[#c5a869]/30 flex items-center justify-center mx-auto text-[#c5a869]">
+                <Key className="w-8 h-8" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold font-serif-title text-white mb-1">
+                  {isAr ? 'تسجيل الدخول الآمن للإدارة' : 'Administrator Secure Login'}
+                </h3>
+                <p className="text-xs text-slate-400">
+                  {isAr ? 'أدخل كلمة المرور الإدارية للوصول (الافتراضية: admin أو admin123)' : 'Enter administrative password (Default: admin or admin123)'}
+                </p>
+              </div>
+
+              <form onSubmit={handleLogin} className="space-y-4">
+                <input
+                  type="password"
+                  value={passwordInput}
+                  onChange={(e) => setPasswordInput(e.target.value)}
+                  placeholder={isAr ? 'كلمة المرور الإدارية' : 'Admin Password'}
+                  className="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-700 text-white text-sm text-center focus:border-[#c5a869] focus:outline-none"
+                  autoFocus
+                />
+
+                {authError && (
+                  <p className="text-xs text-rose-400 flex items-center justify-center gap-1">
+                    <AlertCircle className="w-3.5 h-3.5" />
+                    <span>{isAr ? 'كلمة المرور غير صحيحة. يرجى تجربة admin أو admin123' : 'Incorrect password. Try admin or admin123'}</span>
+                  </p>
+                )}
+
+                <button
+                  type="submit"
+                  className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[#d4af37] via-[#c5a869] to-[#aa8022] text-slate-950 font-bold text-sm hover:brightness-110 transition cursor-pointer shadow-lg"
+                >
+                  {isAr ? 'دخول لوحة التحكم' : 'Access Dashboard'}
+                </button>
+              </form>
+            </div>
+          </div>
+        ) : (
+          /* Authenticated Dashboard Body */
+          <div className="flex-grow flex flex-col md:flex-row overflow-hidden">
+            
+            {/* Sidebar Navigation */}
+            <div className="w-full md:w-64 bg-slate-950/90 border-b md:border-b-0 md:border-l rtl:md:border-l-0 rtl:md:border-r border-slate-800 p-4 flex flex-row md:flex-col gap-1.5 overflow-x-auto md:overflow-y-auto flex-shrink-0">
+              
+              {/* Messages Inbox */}
+              <button
+                onClick={() => { setActiveTab('messages'); setEditingPartner(null); setEditingPractice(null); }}
+                className={`w-full px-4 py-3 rounded-xl text-xs sm:text-sm font-medium transition flex items-center justify-between cursor-pointer whitespace-nowrap ${
+                  activeTab === 'messages' ? 'bg-[#c5a869] text-slate-950 font-bold shadow-md' : 'text-slate-300 hover:bg-slate-900'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <MessageSquare className="w-4 h-4" />
+                  <span>{isAr ? 'طلبات الاستشارات' : 'Inquiries Inbox'}</span>
+                </div>
+                {messages.filter(m => m.status === 'new').length > 0 && (
+                  <span className="px-2 py-0.5 rounded-full bg-rose-500 text-white text-[10px] font-bold">
+                    {messages.filter(m => m.status === 'new').length}
+                  </span>
+                )}
+              </button>
+
+              {/* Partners */}
+              <button
+                onClick={() => { setActiveTab('partners'); setEditingPartner(null); }}
+                className={`w-full px-4 py-3 rounded-xl text-xs sm:text-sm font-medium transition flex items-center justify-between cursor-pointer whitespace-nowrap ${
+                  activeTab === 'partners' ? 'bg-[#c5a869] text-slate-950 font-bold shadow-md' : 'text-slate-300 hover:bg-slate-900'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <Users className="w-4 h-4" />
+                  <span>{isAr ? 'الشركاء والمحامين' : 'Partners & Team'}</span>
+                </div>
+                <span className="text-[11px] opacity-75 font-mono">({partners.length})</span>
+              </button>
+
+              {/* Practices */}
+              <button
+                onClick={() => { setActiveTab('practices'); setEditingPractice(null); }}
+                className={`w-full px-4 py-3 rounded-xl text-xs sm:text-sm font-medium transition flex items-center justify-between cursor-pointer whitespace-nowrap ${
+                  activeTab === 'practices' ? 'bg-[#c5a869] text-slate-950 font-bold shadow-md' : 'text-slate-300 hover:bg-slate-900'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <Scale className="w-4 h-4" />
+                  <span>{isAr ? 'الاختصاصات والخدمات' : 'Practice Areas'}</span>
+                </div>
+                <span className="text-[11px] opacity-75 font-mono">({practiceAreas.length})</span>
+              </button>
+
+              {/* Landmark Cases */}
+              <button
+                onClick={() => { setActiveTab('caseStudies'); setEditingCaseStudy(null); }}
+                className={`w-full px-4 py-3 rounded-xl text-xs sm:text-sm font-medium transition flex items-center justify-between cursor-pointer whitespace-nowrap ${
+                  activeTab === 'caseStudies' ? 'bg-[#c5a869] text-slate-950 font-bold shadow-md' : 'text-slate-300 hover:bg-slate-900'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <Trophy className="w-4 h-4" />
+                  <span>{isAr ? 'الإنجازات والصفقات' : 'Landmark Cases'}</span>
+                </div>
+                <span className="text-[11px] opacity-75 font-mono">({caseStudies.length})</span>
+              </button>
+
+              {/* Testimonials */}
+              <button
+                onClick={() => { setActiveTab('testimonials'); setEditingTestimonial(null); }}
+                className={`w-full px-4 py-3 rounded-xl text-xs sm:text-sm font-medium transition flex items-center justify-between cursor-pointer whitespace-nowrap ${
+                  activeTab === 'testimonials' ? 'bg-[#c5a869] text-slate-950 font-bold shadow-md' : 'text-slate-300 hover:bg-slate-900'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <Star className="w-4 h-4" />
+                  <span>{isAr ? 'آراء وشهادات العملاء' : 'Testimonials'}</span>
+                </div>
+                <span className="text-[11px] opacity-75 font-mono">({testimonials.length})</span>
+              </button>
+
+              {/* Blog */}
+              <button
+                onClick={() => { setActiveTab('blog'); setEditingBlog(null); }}
+                className={`w-full px-4 py-3 rounded-xl text-xs sm:text-sm font-medium transition flex items-center justify-between cursor-pointer whitespace-nowrap ${
+                  activeTab === 'blog' ? 'bg-[#c5a869] text-slate-950 font-bold shadow-md' : 'text-slate-300 hover:bg-slate-900'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <BookOpen className="w-4 h-4" />
+                  <span>{isAr ? 'المقالات والمدونة' : 'Legal Blog'}</span>
+                </div>
+                <span className="text-[11px] opacity-75 font-mono">({blogPosts.length})</span>
+              </button>
+
+              {/* Global Offices */}
+              <button
+                onClick={() => { setActiveTab('offices'); setEditingOffice(null); }}
+                className={`w-full px-4 py-3 rounded-xl text-xs sm:text-sm font-medium transition flex items-center justify-between cursor-pointer whitespace-nowrap ${
+                  activeTab === 'offices' ? 'bg-[#c5a869] text-slate-950 font-bold shadow-md' : 'text-slate-300 hover:bg-slate-900'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <Building className="w-4 h-4" />
+                  <span>{isAr ? 'المقار الدولية والخرائط' : 'Global Offices'}</span>
+                </div>
+                <span className="text-[11px] opacity-75 font-mono">({offices.length})</span>
+              </button>
+
+              {/* Site Settings & Identity */}
+              <button
+                onClick={() => setActiveTab('settings')}
+                className={`w-full px-4 py-3 rounded-xl text-xs sm:text-sm font-medium transition flex items-center gap-2 cursor-pointer whitespace-nowrap ${
+                  activeTab === 'settings' ? 'bg-[#c5a869] text-slate-950 font-bold shadow-md' : 'text-slate-300 hover:bg-slate-900'
+                }`}
+              >
+                <Settings className="w-4 h-4" />
+                <span>{isAr ? 'الهوية والإحصائيات' : 'Identity & Stats'}</span>
+              </button>
+
+              {/* Backup & Data */}
+              <button
+                onClick={() => setActiveTab('backup')}
+                className={`w-full px-4 py-3 rounded-xl text-xs sm:text-sm font-medium transition flex items-center gap-2 cursor-pointer whitespace-nowrap ${
+                  activeTab === 'backup' ? 'bg-[#c5a869] text-slate-950 font-bold shadow-md' : 'text-slate-300 hover:bg-slate-900'
+                }`}
+              >
+                <Download className="w-4 h-4" />
+                <span>{isAr ? 'النسخ الاحتياطي والبيانات' : 'Backup & Restore'}</span>
+              </button>
+            </div>
+
+            {/* Main Content View Area */}
+            <div className="flex-grow p-4 sm:p-6 overflow-y-auto bg-[#080e1a]/70">
+              
+              {/* TAB 1: INQUIRIES & MESSAGES */}
+              {activeTab === 'messages' && (
+                <div className="space-y-6">
+                  {/* Top Bar */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                      <h3 className="text-xl font-bold font-serif-title text-white">
+                        {isAr ? 'صندوق استشارات ورسائل الزوار' : 'Client Inquiries & Consultation Requests'}
+                      </h3>
+                      <p className="text-xs text-slate-400">
+                        {isAr ? `إجمالي الرسائل الواردة: ${messages.length} | المعروض: ${filteredMessages.length}` : `Total Inquiries: ${messages.length}`}
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      {/* Search */}
+                      <div className="relative">
+                        <Search className="w-3.5 h-3.5 absolute right-3 top-3 text-slate-400 rtl:right-3 rtl:left-auto" />
+                        <input
+                          type="text"
+                          value={messageSearch}
+                          onChange={(e) => setMessageSearch(e.target.value)}
+                          placeholder={isAr ? 'بحث بالاسم، الشركة، البريد...' : 'Search inquiries...'}
+                          className="px-8 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs focus:border-[#c5a869] focus:outline-none"
+                        />
+                      </div>
+
+                      {/* Status Filter */}
+                      <select
+                        value={messageStatusFilter}
+                        onChange={(e) => setMessageStatusFilter(e.target.value as any)}
+                        className="px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs focus:border-[#c5a869] focus:outline-none"
+                      >
+                        <option value="all">{isAr ? 'جميع الحالات' : 'All Statuses'}</option>
+                        <option value="new">{isAr ? 'جديد (New)' : 'New'}</option>
+                        <option value="contacted">{isAr ? 'تم التواصل (Contacted)' : 'Contacted'}</option>
+                        <option value="scheduled">{isAr ? 'مجدول (Scheduled)' : 'Scheduled'}</option>
+                        <option value="closed">{isAr ? 'مغلق (Closed)' : 'Closed'}</option>
+                      </select>
+
+                      {/* Urgent Filter Toggle */}
+                      <button
+                        onClick={() => setOnlyUrgentMessages(!onlyUrgentMessages)}
+                        className={`px-3 py-2 rounded-xl text-xs font-semibold border transition cursor-pointer ${
+                          onlyUrgentMessages 
+                            ? 'bg-rose-500/20 text-rose-300 border-rose-500/50' 
+                            : 'bg-slate-900 text-slate-400 border-slate-700'
+                        }`}
+                      >
+                        {isAr ? '🔥 العاجلة فقط' : '🔥 Urgent Only'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {filteredMessages.length === 0 ? (
+                    <div className="p-12 text-center text-slate-400 bg-slate-900/50 rounded-2xl border border-slate-800">
+                      {isAr ? 'لا توجد طلبات استشارة مطابقة لمعايير البحث' : 'No inquiries matching criteria.'}
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {filteredMessages.map((msg) => (
+                        <div
+                          key={msg.id}
+                          className={`p-5 rounded-2xl border transition ${
+                            msg.isUrgent
+                              ? 'bg-rose-950/20 border-rose-500/40'
+                              : msg.status === 'new'
+                              ? 'bg-slate-900/90 border-[#c5a869]/50 shadow-lg'
+                              : 'bg-slate-900/40 border-slate-800'
+                          }`}
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                            <div className="flex items-center gap-3">
+                              <span className="font-bold text-white text-base">{msg.fullName}</span>
+                              {msg.company && (
+                                <span className="text-xs text-slate-400 bg-slate-800 px-2 py-0.5 rounded">
+                                  {msg.company}
+                                </span>
+                              )}
+                              <span className="text-xs px-2 py-0.5 rounded bg-[#c5a869]/15 text-[#e5cb8e] font-medium">
+                                {msg.consultationType}
+                              </span>
+                              {msg.isUrgent && (
+                                <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-500 text-white font-bold animate-pulse">
+                                  {isAr ? 'حالة عاجلة' : 'Urgent'}
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              {/* Status Select */}
+                              <select
+                                value={msg.status}
+                                onChange={(e) => handleUpdateMessageStatus(msg.id, e.target.value as any)}
+                                className={`text-xs px-2.5 py-1 rounded-lg border focus:outline-none cursor-pointer ${
+                                  msg.status === 'new'
+                                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                                    : msg.status === 'contacted'
+                                    ? 'bg-blue-500/20 text-blue-300 border-blue-500/40'
+                                    : msg.status === 'scheduled'
+                                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                                    : 'bg-slate-800 text-slate-400 border-slate-700'
+                                }`}
+                              >
+                                <option value="new">{isAr ? 'جديد' : 'New'}</option>
+                                <option value="contacted">{isAr ? 'تم التواصل' : 'Contacted'}</option>
+                                <option value="scheduled">{isAr ? 'تمت الجدولة' : 'Scheduled'}</option>
+                                <option value="closed">{isAr ? 'مغلق' : 'Closed'}</option>
+                              </select>
+
+                              <button
+                                onClick={() => handleDeleteMessage(msg.id)}
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition cursor-pointer"
+                                title="Delete"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Contact details */}
+                          <div className="flex flex-wrap items-center gap-5 text-xs text-slate-300 mb-3 font-mono">
+                            <span className="flex items-center gap-1.5">
+                              <Phone className="w-3.5 h-3.5 text-[#c5a869]" />
+                              <a href={`tel:${msg.phone}`} className="hover:underline text-slate-200">{msg.phone}</a>
+                            </span>
+                            <span className="flex items-center gap-1.5">
+                              <Mail className="w-3.5 h-3.5 text-[#c5a869]" />
+                              <a href={`mailto:${msg.email}`} className="hover:underline text-slate-200">{msg.email}</a>
+                            </span>
+                            {msg.preferredDate && (
+                              <span className="flex items-center gap-1.5 text-[#e5cb8e]">
+                                <Clock className="w-3.5 h-3.5" />
+                                <span>{isAr ? 'الموعد المفضل:' : 'Date:'} {msg.preferredDate}</span>
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Message Body */}
+                          <p className="text-xs text-slate-200 bg-slate-950/70 p-3.5 rounded-xl border border-slate-800/80 whitespace-pre-line leading-relaxed">
+                            {msg.message}
+                          </p>
+
+                          <div className="mt-2 text-[10px] text-slate-500 text-end">
+                            {new Date(msg.createdAt).toLocaleString(isAr ? 'ar-SA' : 'en-US')}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* TAB 2: PARTNERS & ATTORNEYS MANAGEMENT */}
+              {activeTab === 'partners' && (
+                <div className="space-y-6">
+                  {/* Top Bar Header */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                      <h3 className="text-xl font-bold font-serif-title text-white flex items-center gap-2">
+                        <Users className="w-5 h-5 text-[#c5a869]" />
+                        <span>{isAr ? 'إدارة الشركاء وهيئة المحامين والمستشارين' : 'Partners, Attorneys & Legal Counsel'}</span>
+                      </h3>
+                      <p className="text-xs text-slate-400 mt-1">
+                        {isAr 
+                          ? 'إدارة شاملة لجميع أعضاء الفريق القانوني (شركاء، محامون مشاركون، ومستشارون) وتحديد صفتهم ومؤهلاتهم' 
+                          : 'Comprehensive management for firm partners, non-partner associate attorneys, and legal advisors.'}
+                      </p>
+                    </div>
+
+                    {!editingPartner && (
+                      <div className="flex flex-wrap items-center gap-2">
+                        {/* Add Partner Button */}
+                        <button
+                          onClick={() => setEditingPartner({
+                            id: `partner-${Date.now()}`,
+                            name: '',
+                            nameEn: '',
+                            title: 'شريك في المكتب ومستشار',
+                            titleEn: 'Partner & Senior Legal Advisor',
+                            specialty: 'الشركات والاستثمار التجاري',
+                            specialtyEn: 'Corporate & Investment Advisory',
+                            experienceYears: 15,
+                            education: ['ماجستير في القانون التجاري الدولي'],
+                            bio: '',
+                            bioEn: '',
+                            email: 'partner@aladllaw.com',
+                            phone: '+966 11 456 7890',
+                            linkedin: 'https://linkedin.com',
+                            image: PRESET_PARTNER_IMAGES[0],
+                            featured: true,
+                            barAdmission: 'الهيئة السعودية للمحامين (شريك ممارس)',
+                            languages: ['العربية', 'الإنجليزية'],
+                            casesWonCount: 150,
+                            isPartner: true,
+                            roleCategory: 'partner'
+                          })}
+                          className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-[#c5a869] to-[#d4af37] text-slate-950 font-bold text-xs flex items-center gap-1.5 hover:brightness-110 transition cursor-pointer shadow-md"
+                        >
+                          <Plus className="w-4 h-4" />
+                          <span>{isAr ? '+ إضافة شريك' : '+ Add Partner'}</span>
+                        </button>
+
+                        {/* Add Associate (Non-Partner Lawyer) Button */}
+                        <button
+                          onClick={() => setEditingPartner({
+                            id: `attorney-${Date.now()}`,
+                            name: '',
+                            nameEn: '',
+                            title: 'محامٍ مشارك أول - قسم التقاضي والعقود',
+                            titleEn: 'Senior Associate Attorney - Litigation & Commercial Contracts',
+                            specialty: 'التقاضي التجاري والعمالي وصياغة المذكرات',
+                            specialtyEn: 'Commercial Litigation & Contract Drafting',
+                            experienceYears: 8,
+                            education: ['بكالوريوس في الأنظمة والقانون'],
+                            bio: '',
+                            bioEn: '',
+                            email: 'attorney@aladllaw.com',
+                            phone: '+966 11 456 7890',
+                            linkedin: 'https://linkedin.com',
+                            image: PRESET_PARTNER_IMAGES[4] || PRESET_PARTNER_IMAGES[0],
+                            featured: false,
+                            barAdmission: 'الهيئة السعودية للمحامين (رخصة محامٍ ممارس)',
+                            languages: ['العربية', 'الإنجليزية'],
+                            casesWonCount: 95,
+                            isPartner: false,
+                            roleCategory: 'associate'
+                          })}
+                          className="px-3.5 py-2 rounded-xl bg-cyan-600/20 text-cyan-300 border border-cyan-500/40 hover:bg-cyan-600/30 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer"
+                        >
+                          <UserPlus className="w-4 h-4 text-cyan-400" />
+                          <span>{isAr ? '+ إضافة محامٍ (غير شريك)' : '+ Add Associate Attorney'}</span>
+                        </button>
+
+                        {/* Add Counsel Button */}
+                        <button
+                          onClick={() => setEditingPartner({
+                            id: `counsel-${Date.now()}`,
+                            name: '',
+                            nameEn: '',
+                            title: 'مستشار قانوني أول',
+                            titleEn: 'Senior Legal Counsel & Regulatory Advisor',
+                            specialty: 'الاستشارات التنظيمية والتحكيم والامتثال',
+                            specialtyEn: 'Regulatory Compliance & International Arbitration',
+                            experienceYears: 14,
+                            education: ['ماجستير في القانون والتحكيم التجاري'],
+                            bio: '',
+                            bioEn: '',
+                            email: 'counsel@aladllaw.com',
+                            phone: '+966 11 456 7890',
+                            linkedin: 'https://linkedin.com',
+                            image: PRESET_PARTNER_IMAGES[5] || PRESET_PARTNER_IMAGES[1],
+                            featured: false,
+                            barAdmission: 'ترخيص استشارات قانونية / تحكيم',
+                            languages: ['العربية', 'الإنجليزية'],
+                            casesWonCount: 180,
+                            isPartner: false,
+                            roleCategory: 'counsel'
+                          })}
+                          className="px-3.5 py-2 rounded-xl bg-emerald-600/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-600/30 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer"
+                        >
+                          <Briefcase className="w-4 h-4 text-emerald-400" />
+                          <span>{isAr ? '+ إضافة مستشار' : '+ Add Legal Counsel'}</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {!editingPartner && (
+                    /* Search & Category Filter Bar */
+                    <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      {/* Search Bar */}
+                      <div className="relative flex-grow max-w-md">
+                        <Search className="w-4 h-4 absolute right-3 top-2.5 text-slate-400 rtl:right-3 rtl:left-auto" />
+                        <input
+                          type="text"
+                          value={partnerSearch}
+                          onChange={(e) => setPartnerSearch(e.target.value)}
+                          placeholder={isAr ? 'بحث بالاسم، المسمى المهني، أو الاختصاص...' : 'Search attorneys by name, role, specialty...'}
+                          className="w-full px-9 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869] focus:outline-none"
+                        />
+                        {partnerSearch && (
+                          <button
+                            onClick={() => setPartnerSearch('')}
+                            className="absolute left-3 top-2.5 text-slate-400 hover:text-white text-xs rtl:left-3 rtl:right-auto cursor-pointer"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Filter Badges */}
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <button
+                          onClick={() => setPartnerRoleFilter('all')}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                            partnerRoleFilter === 'all'
+                              ? 'bg-[#c5a869] text-slate-950 font-bold shadow'
+                              : 'bg-slate-950 text-slate-400 border border-slate-800 hover:text-white'
+                          }`}
+                        >
+                          {isAr ? 'الكل' : 'All'} ({partners.length})
+                        </button>
+
+                        <button
+                          onClick={() => setPartnerRoleFilter('partner')}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center gap-1 ${
+                            partnerRoleFilter === 'partner'
+                              ? 'bg-amber-500/25 text-amber-300 border border-amber-500/60 font-bold shadow'
+                              : 'bg-slate-950 text-slate-400 border border-slate-800 hover:text-white'
+                          }`}
+                        >
+                          <span>👔 {isAr ? 'الشركاء فقط' : 'Partners'}</span>
+                          <span className="text-[10px] opacity-80">({partners.filter(p => p.isPartner !== false).length})</span>
+                        </button>
+
+                        <button
+                          onClick={() => setPartnerRoleFilter('associate')}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center gap-1 ${
+                            partnerRoleFilter === 'associate'
+                              ? 'bg-cyan-500/25 text-cyan-300 border border-cyan-500/60 font-bold shadow'
+                              : 'bg-slate-950 text-slate-400 border border-slate-800 hover:text-white'
+                          }`}
+                        >
+                          <span>⚖️ {isAr ? 'المحامون المشاركون (غير الشركاء)' : 'Associates'}</span>
+                          <span className="text-[10px] opacity-80">
+                            ({partners.filter(p => p.isPartner === false && (p.roleCategory === 'associate' || p.roleCategory === 'trainee' || !p.roleCategory)).length})
+                          </span>
+                        </button>
+
+                        <button
+                          onClick={() => setPartnerRoleFilter('counsel')}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center gap-1 ${
+                            partnerRoleFilter === 'counsel'
+                              ? 'bg-emerald-500/25 text-emerald-300 border border-emerald-500/60 font-bold shadow'
+                              : 'bg-slate-950 text-slate-400 border border-slate-800 hover:text-white'
+                          }`}
+                        >
+                          <span>📜 {isAr ? 'المستشارون' : 'Legal Counsel'}</span>
+                          <span className="text-[10px] opacity-80">
+                            ({partners.filter(p => p.isPartner === false && (p.roleCategory === 'counsel' || p.roleCategory === 'legal_consultant')).length})
+                          </span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {editingPartner ? (
+                    /* Partner & Lawyer Edit Form */
+                    <form onSubmit={handleSavePartner} className="p-6 rounded-2xl bg-slate-900 border border-[#c5a869]/50 space-y-5 shadow-2xl">
+                      <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                        <div>
+                          <h4 className="text-base font-bold text-[#e5cb8e] flex items-center gap-2">
+                            {editingPartner.isPartner === false ? (
+                              <>
+                                <Scale className="w-5 h-5 text-cyan-400" />
+                                <span>{isAr ? 'تعديل / إضافة محامٍ أو مستشار (غير شريك)' : 'Edit Associate / Counsel Details'}</span>
+                              </>
+                            ) : (
+                              <>
+                                <UserCheck className="w-5 h-5 text-amber-400" />
+                                <span>{isAr ? 'تعديل / إضافة شريك في المكتب' : 'Edit Partner Details'}</span>
+                              </>
+                            )}
+                          </h4>
+                          <p className="text-xs text-slate-400 mt-0.5">
+                            {isAr ? 'املأ الحقول بدقة، يمكنك تحديد ما إذا كان المحامي شريكاً أو محامياً مشاركاً أو مستشاراً' : 'Set partnership status, category, credentials and bio'}
+                          </p>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={handleTranslateCurrentPartner}
+                            disabled={isTranslating}
+                            className="px-3.5 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-[#e5cb8e] border border-amber-500/50 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50 shadow-sm"
+                            title={isAr ? 'ترجمة فورية وتلقائية للإنجليزية والتركية من الحقول العربية' : 'Auto-translate to English & Turkish from Arabic fields'}
+                          >
+                            {isTranslating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5 text-[#c5a869]" />}
+                            <span>{isAr ? '✨ ترجمة فورية (EN & TR)' : '✨ Translate to EN & TR'}</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setEditingPartner(null)}
+                            className="px-3 py-1.5 rounded-lg bg-slate-800 text-xs text-slate-300 hover:text-white hover:bg-slate-700 transition cursor-pointer"
+                          >
+                            {isAr ? 'إلغاء' : 'Cancel'}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Membership & Partnership Selector */}
+                      <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
+                        <label className="block text-xs font-bold text-slate-200">
+                          {isAr ? 'نوع العضوية والصفة القانونية في المكتب:' : 'Membership & Role Type in Firm:'}
+                        </label>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5">
+                          {/* 1. Partner */}
+                          <div
+                            onClick={() => setEditingPartner({ ...editingPartner, isPartner: true, roleCategory: 'partner' })}
+                            className={`p-3 rounded-xl border cursor-pointer transition flex flex-col justify-between ${
+                              editingPartner.isPartner !== false
+                                ? 'bg-amber-500/15 border-amber-500/60 ring-1 ring-amber-500/50'
+                                : 'bg-slate-900 border-slate-800 hover:border-slate-700 opacity-70'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="text-lg">👔</span>
+                              {editingPartner.isPartner !== false && <Check className="w-4 h-4 text-amber-400" />}
+                            </div>
+                            <div className="mt-2">
+                              <p className="text-xs font-bold text-white">{isAr ? 'شريك في المكتب' : 'Equity Partner'}</p>
+                              <p className="text-[10px] text-slate-400">{isAr ? 'عضو هيئة الشركاء' : 'Partner'}</p>
+                            </div>
+                          </div>
+
+                          {/* 2. Associate Attorney */}
+                          <div
+                            onClick={() => setEditingPartner({ ...editingPartner, isPartner: false, roleCategory: 'associate' })}
+                            className={`p-3 rounded-xl border cursor-pointer transition flex flex-col justify-between ${
+                              editingPartner.isPartner === false && (editingPartner.roleCategory === 'associate' || !editingPartner.roleCategory)
+                                ? 'bg-cyan-500/15 border-cyan-500/60 ring-1 ring-cyan-500/50'
+                                : 'bg-slate-900 border-slate-800 hover:border-slate-700 opacity-70'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="text-lg">⚖️</span>
+                              {editingPartner.isPartner === false && (editingPartner.roleCategory === 'associate' || !editingPartner.roleCategory) && (
+                                <Check className="w-4 h-4 text-cyan-400" />
+                              )}
+                            </div>
+                            <div className="mt-2">
+                              <p className="text-xs font-bold text-white">{isAr ? 'محامٍ مشارك (غير شريك)' : 'Associate Attorney'}</p>
+                              <p className="text-[10px] text-slate-400">{isAr ? 'محامٍ مرخص وممارس' : 'Non-Partner Lawyer'}</p>
+                            </div>
+                          </div>
+
+                          {/* 3. Counsel */}
+                          <div
+                            onClick={() => setEditingPartner({ ...editingPartner, isPartner: false, roleCategory: 'counsel' })}
+                            className={`p-3 rounded-xl border cursor-pointer transition flex flex-col justify-between ${
+                              editingPartner.isPartner === false && (editingPartner.roleCategory === 'counsel' || editingPartner.roleCategory === 'legal_consultant')
+                                ? 'bg-emerald-500/15 border-emerald-500/60 ring-1 ring-emerald-500/50'
+                                : 'bg-slate-900 border-slate-800 hover:border-slate-700 opacity-70'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="text-lg">📜</span>
+                              {editingPartner.isPartner === false && (editingPartner.roleCategory === 'counsel' || editingPartner.roleCategory === 'legal_consultant') && (
+                                <Check className="w-4 h-4 text-emerald-400" />
+                              )}
+                            </div>
+                            <div className="mt-2">
+                              <p className="text-xs font-bold text-white">{isAr ? 'مستشار قانوني' : 'Legal Counsel'}</p>
+                              <p className="text-[10px] text-slate-400">{isAr ? 'استشارات تنظيمية وتحكيم' : 'Advisor / Of Counsel'}</p>
+                            </div>
+                          </div>
+
+                          {/* 4. Trainee */}
+                          <div
+                            onClick={() => setEditingPartner({ ...editingPartner, isPartner: false, roleCategory: 'trainee' })}
+                            className={`p-3 rounded-xl border cursor-pointer transition flex flex-col justify-between ${
+                              editingPartner.isPartner === false && editingPartner.roleCategory === 'trainee'
+                                ? 'bg-purple-500/15 border-purple-500/60 ring-1 ring-purple-500/50'
+                                : 'bg-slate-900 border-slate-800 hover:border-slate-700 opacity-70'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="text-lg">🎓</span>
+                              {editingPartner.isPartner === false && editingPartner.roleCategory === 'trainee' && (
+                                <Check className="w-4 h-4 text-purple-400" />
+                              )}
+                            </div>
+                            <div className="mt-2">
+                              <p className="text-xs font-bold text-white">{isAr ? 'محامٍ متدرب' : 'Trainee Lawyer'}</p>
+                              <p className="text-[10px] text-slate-400">{isAr ? 'تحت التدريب والإشراف' : 'Junior / Trainee'}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Quick Title Auto-Fill Helpers */}
+                        <div className="pt-2 border-t border-slate-900 flex flex-wrap items-center gap-1.5 text-[11px] text-slate-400">
+                          <span className="text-slate-300 font-semibold">{isAr ? 'مسميات مقترحة سريعة:' : 'Quick Title Presets:'}</span>
+                          <button
+                            type="button"
+                            onClick={() => setEditingPartner({ 
+                              ...editingPartner, 
+                              title: 'شريك رئيسي ومستشار', 
+                              titleEn: 'Senior Partner & Legal Advisor',
+                              isPartner: true,
+                              roleCategory: 'senior_partner'
+                            })}
+                            className="px-2 py-0.5 rounded bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 cursor-pointer"
+                          >
+                            شريك رئيسي
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditingPartner({ 
+                              ...editingPartner, 
+                              title: 'شريك إداري ورئيس التقاضي', 
+                              titleEn: 'Managing Partner & Head of Litigation',
+                              isPartner: true,
+                              roleCategory: 'partner'
+                            })}
+                            className="px-2 py-0.5 rounded bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 cursor-pointer"
+                          >
+                            شريك إداري
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditingPartner({ 
+                              ...editingPartner, 
+                              title: 'محامٍ مشارك أول - قسم الشركات', 
+                              titleEn: 'Senior Associate Attorney - Corporate Law',
+                              isPartner: false,
+                              roleCategory: 'associate'
+                            })}
+                            className="px-2 py-0.5 rounded bg-cyan-950 hover:bg-cyan-900 text-cyan-300 border border-cyan-800 cursor-pointer"
+                          >
+                            محامٍ مشارك أول
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditingPartner({ 
+                              ...editingPartner, 
+                              title: 'محامية مشاركة ومستشارة عقود', 
+                              titleEn: 'Associate Attorney & Contracts Advisor',
+                              isPartner: false,
+                              roleCategory: 'associate'
+                            })}
+                            className="px-2 py-0.5 rounded bg-cyan-950 hover:bg-cyan-900 text-cyan-300 border border-cyan-800 cursor-pointer"
+                          >
+                            محامية مشاركة
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditingPartner({ 
+                              ...editingPartner, 
+                              title: 'مستشار قانوني أول وخبير تحكيم', 
+                              titleEn: 'Senior Legal Counsel & Arbitration Expert',
+                              isPartner: false,
+                              roleCategory: 'counsel'
+                            })}
+                            className="px-2 py-0.5 rounded bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-800 cursor-pointer"
+                          >
+                            مستشار قانوني أول
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditingPartner({ 
+                              ...editingPartner, 
+                              title: 'محامٍ متدرب وباحث قانوني', 
+                              titleEn: 'Trainee Lawyer & Legal Researcher',
+                              isPartner: false,
+                              roleCategory: 'trainee'
+                            })}
+                            className="px-2 py-0.5 rounded bg-purple-950 hover:bg-purple-900 text-purple-300 border border-purple-800 cursor-pointer"
+                          >
+                            محامٍ متدرب
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Photo preview & Device Upload */}
+                      <ImageUploader
+                        value={editingPartner.image}
+                        onChange={(newImg) => setEditingPartner({ ...editingPartner, image: newImg })}
+                        label={isAr ? "صورة المحامي / الشريك الشخصية" : "Portrait Photo"}
+                        labelEn="Attorney Portrait Photo"
+                        lang={lang}
+                        presets={PRESET_PARTNER_IMAGES}
+                        aspectRatio="portrait"
+                        helpText={isAr ? "يمكنك رفع صورة عالية الدقة من جهازك أو اختيار أحد النماذج الجاهزة." : "Upload high-res photo from your device."}
+                      />
+
+                      {/* Names */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-300 mb-1">الاسم بالعربية *</label>
+                          <input
+                            type="text"
+                            required
+                            placeholder="مثال: أ.د. طارق السبيعي"
+                            value={editingPartner.name}
+                            onChange={(e) => setEditingPartner({ ...editingPartner, name: e.target.value })}
+                            className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869] focus:outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-300 mb-1">Name in English *</label>
+                          <input
+                            type="text"
+                            required
+                            placeholder="e.g. Prof. Dr. Tariq Al-Subaie"
+                            value={editingPartner.nameEn}
+                            onChange={(e) => setEditingPartner({ ...editingPartner, nameEn: e.target.value })}
+                            className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869] focus:outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Titles */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-300 mb-1">المسمى المهني (عربي) *</label>
+                          <input
+                            type="text"
+                            required
+                            placeholder="مثال: محامٍ مشارك أول - قسم الشركات"
+                            value={editingPartner.title}
+                            onChange={(e) => setEditingPartner({ ...editingPartner, title: e.target.value })}
+                            className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869] focus:outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-300 mb-1">Title (English) *</label>
+                          <input
+                            type="text"
+                            required
+                            placeholder="e.g. Senior Associate Attorney - Corporate"
+                            value={editingPartner.titleEn}
+                            onChange={(e) => setEditingPartner({ ...editingPartner, titleEn: e.target.value })}
+                            className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869] focus:outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Specialty & Stats */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-300 mb-1">مجال الاختصاص الرئيسي *</label>
+                          <input
+                            type="text"
+                            required
+                            placeholder="مثال: النزاعات التجارية والتحكيم"
+                            value={editingPartner.specialty}
+                            onChange={(e) => setEditingPartner({ ...editingPartner, specialty: e.target.value })}
+                            className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869] focus:outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-300 mb-1">سنوات الخبرة</label>
+                          <input
+                            type="number"
+                            value={editingPartner.experienceYears}
+                            onChange={(e) => setEditingPartner({ ...editingPartner, experienceYears: parseInt(e.target.value) || 0 })}
+                            className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869] focus:outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-300 mb-1">ترخيص المحاماة / القيد</label>
+                          <input
+                            type="text"
+                            placeholder="مثال: الهيئة السعودية للمحامين (رقم 1432)"
+                            value={editingPartner.barAdmission}
+                            onChange={(e) => setEditingPartner({ ...editingPartner, barAdmission: e.target.value })}
+                            className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869] focus:outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      {/* English Specialty, Won cases, Languages */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-300 mb-1">Specialty in English *</label>
+                          <input
+                            type="text"
+                            required
+                            placeholder="e.g. Commercial Litigation & Arbitration"
+                            value={editingPartner.specialtyEn}
+                            onChange={(e) => setEditingPartner({ ...editingPartner, specialtyEn: e.target.value })}
+                            className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869] focus:outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-300 mb-1">القضايا والملفات المنجزة (+)</label>
+                          <input
+                            type="number"
+                            value={editingPartner.casesWonCount || 100}
+                            onChange={(e) => setEditingPartner({ ...editingPartner, casesWonCount: parseInt(e.target.value) || 0 })}
+                            className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869] focus:outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-300 mb-1">اللغات المتقنة (مفصولة بفواصل)</label>
+                          <input
+                            type="text"
+                            value={editingPartner.languages?.join(', ') || 'العربية, الإنجليزية'}
+                            onChange={(e) => {
+                              const list = e.target.value.split(',').map(s => s.trim()).filter(Boolean);
+                              setEditingPartner({ ...editingPartner, languages: list });
+                            }}
+                            className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869] focus:outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Education item list builder */}
+                      <div className="p-4 rounded-xl bg-slate-950/70 border border-slate-800">
+                        <label className="block text-xs font-semibold text-slate-300 mb-2 flex items-center gap-1.5">
+                          <GraduationCap className="w-4 h-4 text-[#c5a869]" />
+                          <span>المؤهلات والشهادات الأكاديمية</span>
+                        </label>
+                        <div className="space-y-1.5 mb-3">
+                          {editingPartner.education.map((edu, idx) => (
+                            <div key={idx} className="flex items-center justify-between text-xs bg-slate-900 p-2.5 rounded-lg border border-slate-800">
+                              <span className="text-slate-200">• {edu}</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const updated = editingPartner.education.filter((_, i) => i !== idx);
+                                  setEditingPartner({ ...editingPartner, education: updated });
+                                }}
+                                className="text-rose-400 hover:text-rose-300 text-[11px] cursor-pointer"
+                              >
+                                حذف
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={tempEducationItem}
+                            onChange={(e) => setTempEducationItem(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                if (tempEducationItem.trim()) {
+                                  setEditingPartner({
+                                    ...editingPartner,
+                                    education: [...editingPartner.education, tempEducationItem.trim()]
+                                  });
+                                  setTempEducationItem('');
+                                }
+                              }
+                            }}
+                            placeholder="مثال: ماجستير في قانون الأعمال - جامعة الملك سعود"
+                            className="flex-grow px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869] focus:outline-none"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (tempEducationItem.trim()) {
+                                setEditingPartner({
+                                  ...editingPartner,
+                                  education: [...editingPartner.education, tempEducationItem.trim()]
+                                });
+                                setTempEducationItem('');
+                              }
+                            }}
+                            className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-[#c5a869] hover:text-slate-950 text-xs font-semibold transition cursor-pointer"
+                          >
+                            + إضافة مؤهل
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Contact Info (Email, Phone, LinkedIn) */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-300 mb-1">البريد الإلكتروني المهني</label>
+                          <input
+                            type="email"
+                            value={editingPartner.email}
+                            onChange={(e) => setEditingPartner({ ...editingPartner, email: e.target.value })}
+                            className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869] focus:outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-300 mb-1">الهاتف المباشر</label>
+                          <input
+                            type="text"
+                            value={editingPartner.phone}
+                            onChange={(e) => setEditingPartner({ ...editingPartner, phone: e.target.value })}
+                            className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869] focus:outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-300 mb-1">رابط LinkedIn</label>
+                          <input
+                            type="text"
+                            value={editingPartner.linkedin}
+                            onChange={(e) => setEditingPartner({ ...editingPartner, linkedin: e.target.value })}
+                            className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869] focus:outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Bio in Arabic & English */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-300 mb-1">النبذة المهنية (عربي) *</label>
+                          <textarea
+                            rows={3}
+                            required
+                            placeholder="سيرة مختصرة تشمل الخبرات والمرافعات وأبرز الإنجازات..."
+                            value={editingPartner.bio}
+                            onChange={(e) => setEditingPartner({ ...editingPartner, bio: e.target.value })}
+                            className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869] focus:outline-none leading-relaxed"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-300 mb-1">Professional Bio (English) *</label>
+                          <textarea
+                            rows={3}
+                            required
+                            placeholder="Brief bio highlighting litigation experience and achievements..."
+                            value={editingPartner.bioEn}
+                            onChange={(e) => setEditingPartner({ ...editingPartner, bioEn: e.target.value })}
+                            className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869] focus:outline-none leading-relaxed"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Featured Checkbox */}
+                      <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            id="partnerFeatured"
+                            checked={editingPartner.featured}
+                            onChange={(e) => setEditingPartner({ ...editingPartner, featured: e.target.checked })}
+                            className="w-4 h-4 accent-[#c5a869] cursor-pointer"
+                          />
+                          <label htmlFor="partnerFeatured" className="text-xs text-slate-200 cursor-pointer font-medium">
+                            {isAr ? '⭐ إبراز هذا المحامي / الشريك في الصفحة الرئيسية للموقع' : '⭐ Feature prominently on Homepage'}
+                          </label>
+                        </div>
+                        <span className="text-[11px] text-slate-400">
+                          {editingPartner.featured ? (isAr ? 'نعم (مميّز)' : 'Featured') : (isAr ? 'عرض قياسي' : 'Standard')}
+                        </span>
+                      </div>
+
+                      {/* Submit Actions */}
+                      <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
+                        <button
+                          type="button"
+                          onClick={() => setEditingPartner(null)}
+                          className="px-4 py-2 rounded-lg text-slate-400 hover:text-white text-xs cursor-pointer"
+                        >
+                          {isAr ? 'إلغاء' : 'Cancel'}
+                        </button>
+                        <button
+                          type="submit"
+                          className="px-6 py-2.5 rounded-lg bg-gradient-to-r from-[#c5a869] to-[#d4af37] text-slate-950 font-bold text-xs hover:brightness-110 transition flex items-center gap-1.5 shadow-lg cursor-pointer"
+                        >
+                          <Save className="w-4 h-4" />
+                          <span>
+                            {isAr 
+                              ? (editingPartner.isPartner === false ? 'حفظ بيانات المحامي' : 'حفظ بيانات الشريك')
+                              : 'Save Member Details'}
+                          </span>
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    /* Legal Team Grid */
+                    <div className="space-y-4">
+                      {/* Filtered list rendering */}
+                      {(() => {
+                        const filtered = partners.filter((p) => {
+                          const matchSearch = partnerSearch === '' ||
+                            p.name.toLowerCase().includes(partnerSearch.toLowerCase()) ||
+                            p.nameEn.toLowerCase().includes(partnerSearch.toLowerCase()) ||
+                            p.title.toLowerCase().includes(partnerSearch.toLowerCase()) ||
+                            p.specialty.toLowerCase().includes(partnerSearch.toLowerCase());
+
+                          let matchRole = true;
+                          if (partnerRoleFilter === 'partner') {
+                            matchRole = p.isPartner !== false;
+                          } else if (partnerRoleFilter === 'associate') {
+                            matchRole = p.isPartner === false && (p.roleCategory === 'associate' || p.roleCategory === 'trainee' || !p.roleCategory);
+                          } else if (partnerRoleFilter === 'counsel') {
+                            matchRole = p.isPartner === false && (p.roleCategory === 'counsel' || p.roleCategory === 'legal_consultant');
+                          }
+
+                          return matchSearch && matchRole;
+                        });
+
+                        if (filtered.length === 0) {
+                          return (
+                            <div className="text-center py-12 rounded-2xl bg-slate-900/40 border border-slate-800">
+                              <Users className="w-10 h-10 text-slate-600 mx-auto mb-3" />
+                              <p className="text-slate-300 font-bold text-sm">
+                                {isAr ? 'لا توجد نتائج مطابقة للبحث أو التصفية' : 'No team members matching your filter'}
+                              </p>
+                              <p className="text-slate-500 text-xs mt-1">
+                                {isAr ? 'جرّب تغيير كلمات البحث أو إضافة محامٍ جديد' : 'Try adjusting your search criteria'}
+                              </p>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {filtered.map((partner) => {
+                              const isPartner = partner.isPartner !== false;
+                              const isCounsel = partner.roleCategory === 'counsel' || partner.roleCategory === 'legal_consultant';
+                              const isTrainee = partner.roleCategory === 'trainee';
+
+                              return (
+                                <div 
+                                  key={partner.id} 
+                                  className={`p-4 rounded-2xl bg-slate-900/90 border transition-all duration-200 flex flex-col justify-between hover:shadow-xl ${
+                                    isPartner 
+                                      ? 'border-amber-500/30 hover:border-amber-400/70' 
+                                      : isCounsel
+                                      ? 'border-emerald-500/30 hover:border-emerald-400/70'
+                                      : isTrainee
+                                      ? 'border-purple-500/30 hover:border-purple-400/70'
+                                      : 'border-cyan-500/30 hover:border-cyan-400/70'
+                                  }`}
+                                >
+                                  <div>
+                                    {/* Top Row: Photo & Role Badge */}
+                                    <div className="flex items-start gap-3">
+                                      <div className="relative">
+                                        <img
+                                          src={partner.image}
+                                          alt={partner.name}
+                                          className="w-16 h-20 rounded-xl object-cover border border-slate-700 flex-shrink-0"
+                                        />
+                                        {partner.featured && (
+                                          <span className="absolute -top-1.5 -right-1.5 px-1.5 py-0.5 rounded-full bg-[#c5a869] text-slate-950 text-[9px] font-extrabold shadow">
+                                            ★
+                                          </span>
+                                        )}
+                                      </div>
+
+                                      <div className="flex-grow min-w-0">
+                                        {/* Status Badge */}
+                                        <div className="mb-1.5 flex flex-wrap items-center gap-1">
+                                          {isPartner ? (
+                                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                                              👔 {isAr ? 'شريك في المكتب' : 'Partner'}
+                                            </span>
+                                          ) : isCounsel ? (
+                                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                                              📜 {isAr ? 'مستشار قانوني' : 'Counsel'}
+                                            </span>
+                                          ) : isTrainee ? (
+                                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40">
+                                              🎓 {isAr ? 'محامٍ متدرب' : 'Trainee'}
+                                            </span>
+                                          ) : (
+                                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
+                                              ⚖️ {isAr ? 'محامٍ مشارك (غير شريك)' : 'Associate Attorney'}
+                                            </span>
+                                          )}
+                                        </div>
+
+                                        <h4 className="font-bold text-white text-sm truncate">{partner.name}</h4>
+                                        <p className="text-[11px] text-[#c5a869] line-clamp-1 mt-0.5">{partner.title}</p>
+                                        <p className="text-[11px] text-slate-400 line-clamp-1 mt-0.5">{partner.specialty}</p>
+                                      </div>
+                                    </div>
+
+                                    {/* Stats line */}
+                                    <div className="mt-3 pt-2.5 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
+                                      <span>⏳ {partner.experienceYears} {isAr ? 'سنة خبرة' : 'Yrs Exp'}</span>
+                                      <span>⚖️ {partner.casesWonCount || 0}+ {isAr ? 'قضية' : 'Cases'}</span>
+                                    </div>
+                                  </div>
+
+                                  {/* Action Buttons */}
+                                  <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-slate-800">
+                                    <span className="text-[10px] text-slate-500 font-mono truncate max-w-[120px]">
+                                      {partner.barAdmission || 'الهيئة السعودية'}
+                                    </span>
+
+                                    <div className="flex items-center gap-3">
+                                      <button
+                                        onClick={() => setEditingPartner(partner)}
+                                        className="text-xs text-[#e5cb8e] hover:underline flex items-center gap-1 cursor-pointer font-medium"
+                                      >
+                                        <Edit3 className="w-3.5 h-3.5" />
+                                        <span>{isAr ? 'تعديل' : 'Edit'}</span>
+                                      </button>
+                                      <button
+                                        onClick={() => handleDeletePartner(partner.id, partner.name)}
+                                        className="text-xs text-rose-400 hover:text-rose-300 hover:underline flex items-center gap-1 cursor-pointer font-medium"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                        <span>{isAr ? 'حذف' : 'Delete'}</span>
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* TAB 3: PRACTICE AREAS */}
+              {activeTab === 'practices' && (
+                <div className="space-y-6">
+                  {/* Top Bar with Add Button and Controls */}
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div>
+                      <h3 className="text-xl font-bold font-serif-title text-white flex items-center gap-2">
+                        <span>{isAr ? 'إدارة الاختصاصات والتصنيفات القانونية' : 'Practice Areas & Category Management'}</span>
+                        <span className="px-2 py-0.5 rounded-full text-[11px] font-mono bg-[#c5a869]/20 text-[#c5a869] border border-[#c5a869]/40">
+                          {practiceAreas.length} {isAr ? 'اختصاص' : 'Practices'}
+                        </span>
+                      </h3>
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        {isAr 
+                          ? 'إضافة وتعديل الاختصاصات وتغيير تصنيفاتها وتحديد الشركاء المشرفين ونطاق الخدمات' 
+                          : 'Manage practice areas, change classifications, assign lead partners and key services'}
+                      </p>
+                    </div>
+
+                    {!editingPractice && (
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => {
+                            setShowCustomCategoryInput(false);
+                            setEditingPractice({
+                              id: `practice-${Date.now()}`,
+                              title: '',
+                              titleEn: '',
+                              category: 'corporate',
+                              categoryLabelAr: 'قانون الشركات والاستحواذ',
+                              categoryLabelEn: 'Corporate & M&A',
+                              iconName: 'Scale',
+                              shortDesc: '',
+                              shortDescEn: '',
+                              fullDesc: '',
+                              fullDescEn: '',
+                              keyServices: ['صياغة وتدقيق العقود والاتفاقيات', 'التمثيل أمام الهيئات القضائية والتحكيمية', 'تقديم الاستشارات الوقائية والتنظيمية'],
+                              keyServicesEn: ['Contract Drafting & Review', 'Judicial Representation', 'Regulatory & Compliance Advisory'],
+                              casesCount: 85,
+                              image: PRESET_PRACTICE_IMAGES[0]
+                            });
+                          }}
+                          className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#c5a869] to-[#d4af37] text-slate-950 font-bold text-xs flex items-center gap-1.5 hover:brightness-110 transition cursor-pointer shadow-lg"
+                        >
+                          <Plus className="w-4 h-4" />
+                          <span>{isAr ? '+ إضافة اختصاص قانوني جديد' : '+ Add New Practice'}</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Search and Category Filter Toolbar (Visible when not editing) */}
+                  {!editingPractice && (
+                    <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-3">
+                      <div className="flex flex-col sm:flex-row items-center gap-3">
+                        {/* Search input */}
+                        <div className="relative flex-grow w-full">
+                          <Search className="w-4 h-4 text-slate-400 absolute top-1/2 -translate-y-1/2 right-3 rtl:right-3 rtl:left-auto ltr:left-3 ltr:right-auto" />
+                          <input
+                            type="text"
+                            placeholder={isAr ? "بحث بالاسم، التصنيف، أو الكلمات المفتاحية..." : "Search by name, category, or keywords..."}
+                            value={practiceSearch}
+                            onChange={(e) => setPracticeSearch(e.target.value)}
+                            className="w-full pr-9 pl-4 rtl:pr-9 rtl:pl-4 ltr:pl-9 ltr:pr-4 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-500 focus:border-[#c5a869] focus:outline-none"
+                          />
+                        </div>
+
+                        {/* Reset Filter Button if active */}
+                        {(practiceSearch || practiceCategoryFilter !== 'all') && (
+                          <button
+                            onClick={() => {
+                              setPracticeSearch('');
+                              setPracticeCategoryFilter('all');
+                            }}
+                            className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs whitespace-nowrap cursor-pointer"
+                          >
+                            {isAr ? 'إعادة ضبط التصفية' : 'Reset Filter'}
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Category Filter Pills */}
+                      <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                        <span className="text-[11px] font-semibold text-slate-400 ml-1 rtl:ml-1 ltr:mr-1 flex items-center gap-1">
+                          <Filter className="w-3 h-3 text-[#c5a869]" />
+                          {isAr ? 'تصفية حسب التصنيف:' : 'Filter by Category:'}
+                        </span>
+
+                        <button
+                          type="button"
+                          onClick={() => setPracticeCategoryFilter('all')}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                            practiceCategoryFilter === 'all'
+                              ? 'bg-[#c5a869] text-slate-950 font-bold shadow'
+                              : 'bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800'
+                          }`}
+                        >
+                          {isAr ? 'الكل' : 'All'} ({practiceAreas.length})
+                        </button>
+
+                        {(() => {
+                          const uniqueCats = Array.from(new Set(practiceAreas.map(p => p.category).filter(Boolean)));
+                          return uniqueCats.map((catKey) => {
+                            const count = practiceAreas.filter(p => p.category === catKey).length;
+                            const preset = PRESET_PRACTICE_CATEGORIES.find(p => p.id === catKey);
+                            const sample = practiceAreas.find(p => p.category === catKey);
+                            const label = sample?.categoryLabelAr || preset?.labelAr || catKey;
+                            const isSelected = practiceCategoryFilter === catKey;
+
+                            return (
+                              <button
+                                key={catKey}
+                                type="button"
+                                onClick={() => setPracticeCategoryFilter(catKey)}
+                                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition flex items-center gap-1 cursor-pointer ${
+                                  isSelected
+                                    ? 'bg-[#c5a869] text-slate-950 font-bold shadow'
+                                    : 'bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800'
+                                }`}
+                              >
+                                <span>{preset?.icon || '📁'}</span>
+                                <span>{label}</span>
+                                <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${isSelected ? 'bg-slate-950/30 text-slate-950' : 'bg-slate-800 text-slate-400'}`}>
+                                  {count}
+                                </span>
+                              </button>
+                            );
+                          });
+                        })()}
+                      </div>
+                    </div>
+                  )}
+
+                  {editingPractice ? (
+                    /* Practice Edit & Creation Form */
+                    <form onSubmit={handleSavePractice} className="p-6 sm:p-7 rounded-2xl bg-slate-900 border border-[#c5a869]/50 space-y-6 shadow-2xl">
+                      <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-9 h-9 rounded-xl bg-[#c5a869]/20 border border-[#c5a869]/40 flex items-center justify-center text-[#c5a869]">
+                            <Layers className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-bold text-white">
+                              {editingPractice.title ? (isAr ? `تعديل اختصاص: ${editingPractice.title}` : `Edit: ${editingPractice.title}`) : (isAr ? 'إضافة اختصاص قانوني جديد' : 'New Practice Area')}
+                            </h4>
+                            <p className="text-[11px] text-slate-400">
+                              {isAr ? 'حدّد أو عدّل التصنيف القانوني، المسمى، المشرف ونطاق الخدمات المشمولة' : 'Set category, title, supervising lead attorney and services'}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={handleTranslateCurrentPractice}
+                            disabled={isTranslating}
+                            className="px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-[#e5cb8e] border border-amber-500/50 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50 shadow-sm"
+                            title={isAr ? 'ترجمة فورية وتلقائية للإنجليزية والتركية' : 'Auto-translate to English & Turkish'}
+                          >
+                            {isTranslating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5 text-[#c5a869]" />}
+                            <span>{isAr ? '✨ ترجمة فورية (EN & TR)' : '✨ Translate to EN & TR'}</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setEditingPractice(null)}
+                            className="px-3 py-1.5 rounded-lg bg-slate-800 text-xs text-slate-300 hover:text-white hover:bg-slate-700 transition cursor-pointer"
+                          >
+                            {isAr ? 'إلغاء' : 'Cancel'}
+                          </button>
+
+                          <span className="text-xs px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 border border-slate-700 font-mono hidden sm:inline-block">
+                            ID: {editingPractice.id}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* --- SECTION 1: CATEGORY / CLASSIFICATION SELECTION & EDITING --- */}
+                      <div className="p-5 rounded-2xl bg-slate-950/80 border border-[#c5a869]/30 space-y-4">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                          <div>
+                            <label className="text-xs font-bold text-[#e5cb8e] flex items-center gap-1.5">
+                              <Tag className="w-4 h-4 text-[#c5a869]" />
+                              <span>{isAr ? 'التصنيف القانوني للاختصاص (Category & Classification) *' : 'Legal Practice Category *'}</span>
+                            </label>
+                            <p className="text-[11px] text-slate-400 mt-0.5">
+                              {isAr ? 'اختر من التصنيفات القياسية المعتمدة، أو قم بتعديل وتسمية تصنيف مخصص بحرية تامة:' : 'Choose a standard classification or customize your own:'}
+                            </p>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <span className="text-[11px] text-slate-400">التصنيف الحالي:</span>
+                            <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-[#c5a869]/20 text-[#e5cb8e] border border-[#c5a869]/40">
+                              {editingPractice.categoryLabelAr || editingPractice.category}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Quick 1-Click Category Selection Grid */}
+                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                          {PRESET_PRACTICE_CATEGORIES.map((cat) => {
+                            const isSelected = editingPractice.category === cat.id;
+                            return (
+                              <button
+                                key={cat.id}
+                                type="button"
+                                onClick={() => {
+                                  setEditingPractice({
+                                    ...editingPractice,
+                                    category: cat.id,
+                                    categoryLabelAr: cat.labelAr,
+                                    categoryLabelEn: cat.labelEn,
+                                  });
+                                }}
+                                className={`p-2.5 rounded-xl border text-right rtl:text-right ltr:text-left transition flex items-center gap-2 cursor-pointer ${
+                                  isSelected
+                                    ? 'bg-[#c5a869]/20 border-[#c5a869] text-white shadow-md ring-1 ring-[#c5a869]/50'
+                                    : 'bg-slate-900/90 border-slate-800 text-slate-300 hover:border-slate-700 hover:bg-slate-900'
+                                }`}
+                              >
+                                <span className="text-base flex-shrink-0">{cat.icon}</span>
+                                <div className="min-w-0 flex-grow">
+                                  <p className="text-[11px] font-bold truncate leading-tight">{isAr ? cat.labelAr : cat.labelEn}</p>
+                                  <p className="text-[9px] text-slate-400 truncate mt-0.5">{cat.id}</p>
+                                </div>
+                                {isSelected && (
+                                  <Check className="w-3.5 h-3.5 text-[#c5a869] flex-shrink-0" />
+                                )}
+                              </button>
+                            );
+                          })}
+
+                          {/* Custom Category Button */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowCustomCategoryInput(true);
+                              if (PRESET_PRACTICE_CATEGORIES.some(c => c.id === editingPractice.category)) {
+                                setEditingPractice({
+                                  ...editingPractice,
+                                  category: 'custom_' + Date.now().toString().slice(-4),
+                                  categoryLabelAr: 'تصنيف مخصص جديد',
+                                  categoryLabelEn: 'Custom Practice Category',
+                                });
+                              }
+                            }}
+                            className={`p-2.5 rounded-xl border text-right rtl:text-right ltr:text-left transition flex items-center gap-2 cursor-pointer ${
+                              !PRESET_PRACTICE_CATEGORIES.some(c => c.id === editingPractice.category) || showCustomCategoryInput
+                                ? 'bg-amber-500/20 border-amber-400 text-amber-200 ring-1 ring-amber-400/50'
+                                : 'bg-slate-900/90 border-dashed border-slate-700 text-slate-400 hover:border-[#c5a869] hover:text-slate-200'
+                            }`}
+                          >
+                            <span className="text-base flex-shrink-0">✨</span>
+                            <div className="min-w-0 flex-grow">
+                              <p className="text-[11px] font-bold truncate leading-tight">{isAr ? 'تصنيف مخصص يدوي' : 'Custom Category'}</p>
+                              <p className="text-[9px] text-slate-400 truncate mt-0.5">{isAr ? 'إدخال اسم جديد' : 'New name'}</p>
+                            </div>
+                          </button>
+                        </div>
+
+                        {/* Editable Classification Inputs (Allows changing/renaming category code and display names) */}
+                        <div className="pt-3 border-t border-slate-800/80">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-[11px] font-semibold text-slate-300">
+                              {isAr ? '✏️ تعديل مسميات ورمز التصنيف المختار:' : '✏️ Edit Category Code & Custom Labels:'}
+                            </span>
+                            <span className="text-[10px] text-slate-500">
+                              {isAr ? 'يمكنك تعديل الاسم العربي والإنجليزي للتصنيف بحرية' : 'Freely customize both Arabic and English names'}
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div>
+                              <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                                {isAr ? 'رمز التصنيف الداخلي (Category Key) *' : 'Category Key *'}
+                              </label>
+                              <input
+                                type="text"
+                                required
+                                value={editingPractice.category}
+                                onChange={(e) => setEditingPractice({ ...editingPractice, category: e.target.value })}
+                                placeholder="e.g. corporate, finance, health_law"
+                                className="w-full px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-white font-mono text-xs focus:border-[#c5a869] focus:outline-none"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                                {isAr ? 'اسم التصنيف بالعربية (العرض للزوار) *' : 'Category Title (Arabic) *'}
+                              </label>
+                              <input
+                                type="text"
+                                required
+                                value={editingPractice.categoryLabelAr || ''}
+                                onChange={(e) => setEditingPractice({ ...editingPractice, categoryLabelAr: e.target.value })}
+                                placeholder="مثال: قانون الشركات والاستحواذ"
+                                className="w-full px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-white text-xs focus:border-[#c5a869] focus:outline-none"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                                {isAr ? 'Category Title in English *' : 'Category Title (English) *'}
+                              </label>
+                              <input
+                                type="text"
+                                required
+                                value={editingPractice.categoryLabelEn || ''}
+                                onChange={(e) => setEditingPractice({ ...editingPractice, categoryLabelEn: e.target.value })}
+                                placeholder="e.g. Corporate & M&A"
+                                className="w-full px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-white text-xs focus:border-[#c5a869] focus:outline-none"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* --- SECTION 2: PRACTICE DETAILS (Titles, Icon & Supervising Lead Attorney) --- */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-300 mb-1">اسم الاختصاص القانوني (عربي) *</label>
+                          <input
+                            type="text"
+                            required
+                            placeholder="مثال: قانون الشركات والصفقات والاندماج"
+                            value={editingPractice.title}
+                            onChange={(e) => setEditingPractice({ ...editingPractice, title: e.target.value })}
+                            className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869] focus:outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-300 mb-1">Practice Area Title (English) *</label>
+                          <input
+                            type="text"
+                            required
+                            placeholder="e.g. Corporate Governance & M&A Transactions"
+                            value={editingPractice.titleEn}
+                            onChange={(e) => setEditingPractice({ ...editingPractice, titleEn: e.target.value })}
+                            className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869] focus:outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Icon Selector & Supervising Lead Partner */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        {/* Icon picker */}
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-300 mb-1">
+                            {isAr ? 'أيقونة الاختصاص' : 'Practice Icon'}
+                          </label>
+                          <select
+                            value={editingPractice.iconName}
+                            onChange={(e) => setEditingPractice({ ...editingPractice, iconName: e.target.value })}
+                            className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869] focus:outline-none"
+                          >
+                            {PRESET_PRACTICE_ICONS.map((ic) => (
+                              <option key={ic.name} value={ic.name}>
+                                {ic.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* Lead Partner / Attorney Assignment */}
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-300 mb-1">
+                            {isAr ? 'المحامي / الشريك المشرف على الاختصاص' : 'Supervising Lead Partner'}
+                          </label>
+                          <select
+                            value={editingPractice.leadPartnerId || ''}
+                            onChange={(e) => setEditingPractice({ ...editingPractice, leadPartnerId: e.target.value || undefined })}
+                            className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869] focus:outline-none"
+                          >
+                            <option value="">{isAr ? '-- بدون تعيين شريك محدد --' : '-- None Assigned --'}</option>
+                            {partners.map((p) => (
+                              <option key={p.id} value={p.id}>
+                                {p.name} - ({p.title})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* Cases Count */}
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-300 mb-1">
+                            {isAr ? 'عدد القضايا / المعاملات المنجزة (+)' : 'Cases / Deals Completed'}
+                          </label>
+                          <input
+                            type="number"
+                            value={editingPractice.casesCount}
+                            onChange={(e) => setEditingPractice({ ...editingPractice, casesCount: parseInt(e.target.value) || 0 })}
+                            className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869] focus:outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Practice Area Image selector & Device Upload */}
+                      <ImageUploader
+                        value={editingPractice.image}
+                        onChange={(newImg) => setEditingPractice({ ...editingPractice, image: newImg })}
+                        label={isAr ? "صورة غلاف وخلفية الاختصاص" : "Practice Cover Backdrop"}
+                        labelEn="Practice Cover Image"
+                        lang={lang}
+                        presets={PRESET_PRACTICE_IMAGES}
+                        aspectRatio="video"
+                        helpText={isAr ? "ارفع صورة خلفية عالية الدقة من جهازك أو اختر من النماذج المعمارية الفاخرة." : "Upload high-res background from device or choose preset."}
+                      />
+
+                      {/* Short descriptions */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-300 mb-1">الوصف المختصر (عربي) *</label>
+                          <textarea
+                            rows={2}
+                            required
+                            placeholder="نبذة موجزة تظهر في بطاقة الاختصاص..."
+                            value={editingPractice.shortDesc}
+                            onChange={(e) => setEditingPractice({ ...editingPractice, shortDesc: e.target.value })}
+                            className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869] focus:outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-300 mb-1">Short Description (English) *</label>
+                          <textarea
+                            rows={2}
+                            required
+                            placeholder="Brief synopsis shown on the card preview..."
+                            value={editingPractice.shortDescEn}
+                            onChange={(e) => setEditingPractice({ ...editingPractice, shortDescEn: e.target.value })}
+                            className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869] focus:outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Full descriptions */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-300 mb-1">الوصف التفصيلي الكامل (عربي)</label>
+                          <textarea
+                            rows={3}
+                            placeholder="شرح متكامل يظهر في النافذة المنبثقة للاختصاص واستعراض الخبرات..."
+                            value={editingPractice.fullDesc}
+                            onChange={(e) => setEditingPractice({ ...editingPractice, fullDesc: e.target.value })}
+                            className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869] focus:outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-300 mb-1">Full Detailed Overview (English)</label>
+                          <textarea
+                            rows={3}
+                            placeholder="Detailed overview for the popup modal explaining advisory depth..."
+                            value={editingPractice.fullDescEn}
+                            onChange={(e) => setEditingPractice({ ...editingPractice, fullDescEn: e.target.value })}
+                            className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869] focus:outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Key services dynamic builder */}
+                      <div className="p-4 rounded-xl bg-slate-950/70 border border-slate-800">
+                        <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                          {isAr ? 'قائمة الخدمات والحلول المشمولة ضمن هذا الاختصاص' : 'Scope of Services Included'}
+                        </label>
+                        
+                        <div className="space-y-1.5 mb-3">
+                          {editingPractice.keyServices.map((srv, idx) => (
+                            <div key={idx} className="flex items-center justify-between text-xs bg-slate-900 p-2 rounded-lg border border-slate-800">
+                              <span className="text-slate-200">• {srv}</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const updated = editingPractice.keyServices.filter((_, i) => i !== idx);
+                                  setEditingPractice({ ...editingPractice, keyServices: updated });
+                                }}
+                                className="text-rose-400 hover:underline text-[11px] cursor-pointer"
+                              >
+                                {isAr ? 'حذف' : 'Remove'}
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={tempServiceItem}
+                            onChange={(e) => setTempServiceItem(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                if (tempServiceItem.trim()) {
+                                  setEditingPractice({
+                                    ...editingPractice,
+                                    keyServices: [...editingPractice.keyServices, tempServiceItem.trim()]
+                                  });
+                                  setTempServiceItem('');
+                                }
+                              }
+                            }}
+                            placeholder={isAr ? "اكتب خدمة جديدة (مثال: تدقيق العقود النافي للجهالة) ثم اضغط إضافة..." : "Type service and press add..."}
+                            className="flex-grow px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white text-xs focus:border-[#c5a869] focus:outline-none"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (tempServiceItem.trim()) {
+                                setEditingPractice({
+                                  ...editingPractice,
+                                  keyServices: [...editingPractice.keyServices, tempServiceItem.trim()]
+                                });
+                                setTempServiceItem('');
+                              }
+                            }}
+                            className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-[#c5a869] hover:text-slate-950 text-xs font-semibold text-slate-200 transition cursor-pointer"
+                          >
+                            + {isAr ? 'إضافة خدمة' : 'Add Service'}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Submit & Cancel Actions */}
+                      <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
+                        <button
+                          type="button"
+                          onClick={() => setEditingPractice(null)}
+                          className="px-4 py-2 rounded-lg text-slate-400 hover:text-white text-xs cursor-pointer"
+                        >
+                          {isAr ? 'إلغاء' : 'Cancel'}
+                        </button>
+                        <button
+                          type="submit"
+                          className="px-6 py-2.5 rounded-lg bg-gradient-to-r from-[#c5a869] to-[#d4af37] text-slate-950 font-bold text-xs hover:brightness-110 transition flex items-center gap-1.5 shadow-lg cursor-pointer"
+                        >
+                          <Save className="w-4 h-4" />
+                          <span>{isAr ? 'حفظ وتثبيت الاختصاص والتصنيف' : 'Save Practice & Category'}</span>
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    /* Practice Areas Grid List */
+                    <div className="space-y-4">
+                      {(() => {
+                        const filtered = practiceAreas.filter((p) => {
+                          const matchSearch = practiceSearch === '' ||
+                            p.title.toLowerCase().includes(practiceSearch.toLowerCase()) ||
+                            p.titleEn.toLowerCase().includes(practiceSearch.toLowerCase()) ||
+                            p.category.toLowerCase().includes(practiceSearch.toLowerCase()) ||
+                            (p.categoryLabelAr && p.categoryLabelAr.toLowerCase().includes(practiceSearch.toLowerCase())) ||
+                            p.shortDesc.toLowerCase().includes(practiceSearch.toLowerCase());
+
+                          const matchCategory = practiceCategoryFilter === 'all' || p.category === practiceCategoryFilter;
+                          return matchSearch && matchCategory;
+                        });
+
+                        if (filtered.length === 0) {
+                          return (
+                            <div className="text-center py-12 rounded-2xl bg-slate-900/40 border border-slate-800">
+                              <Layers className="w-10 h-10 text-slate-600 mx-auto mb-3" />
+                              <p className="text-slate-300 font-bold text-sm">
+                                {isAr ? 'لا توجد اختصاصات مطابقة للبحث أو التصنيف المحدد' : 'No practice areas matching your search'}
+                              </p>
+                              <p className="text-slate-500 text-xs mt-1">
+                                {isAr ? 'جرّب إعادة تعيين التصفية أو أضف اختصاصاً جديداً' : 'Try adjusting your filters or add a new practice area'}
+                              </p>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {filtered.map((practice) => {
+                              const preset = PRESET_PRACTICE_CATEGORIES.find(c => c.id === practice.category);
+                              const categoryDisplay = practice.categoryLabelAr || preset?.labelAr || practice.category;
+                              const leadPartner = partners.find(p => p.id === practice.leadPartnerId);
+
+                              return (
+                                <div 
+                                  key={practice.id} 
+                                  className="p-5 rounded-2xl bg-slate-900/90 border border-slate-800 hover:border-[#c5a869]/50 transition-all duration-200 flex flex-col justify-between hover:shadow-xl group"
+                                >
+                                  <div>
+                                    {/* Top Row: Category Pill & Case count */}
+                                    <div className="flex items-start justify-between gap-2 mb-3">
+                                      <span className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-[#c5a869]/15 text-[#e5cb8e] border border-[#c5a869]/30 flex items-center gap-1 truncate max-w-[70%]">
+                                        <span>{preset?.icon || '📁'}</span>
+                                        <span className="truncate">{categoryDisplay}</span>
+                                      </span>
+
+                                      <span className="text-xs text-[#c5a869] font-mono font-bold bg-slate-950 px-2 py-0.5 rounded border border-slate-800">
+                                        +{practice.casesCount} {isAr ? 'قضية' : 'Cases'}
+                                      </span>
+                                    </div>
+
+                                    {/* Practice Title */}
+                                    <h4 className="font-bold text-white text-base leading-snug group-hover:text-[#e5cb8e] transition-colors mb-1.5">
+                                      {practice.title}
+                                    </h4>
+
+                                    <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed mb-3">
+                                      {practice.shortDesc}
+                                    </p>
+
+                                    {/* Lead Partner if assigned */}
+                                    {leadPartner && (
+                                      <div className="p-2 rounded-xl bg-slate-950/80 border border-slate-800/80 flex items-center gap-2 mb-2">
+                                        <img
+                                          src={leadPartner.image}
+                                          alt={leadPartner.name}
+                                          className="w-6 h-6 rounded-full object-cover border border-slate-700"
+                                        />
+                                        <div className="min-w-0 flex-grow">
+                                          <p className="text-[11px] text-slate-300 font-semibold truncate">{leadPartner.name}</p>
+                                          <p className="text-[9px] text-[#c5a869] truncate">{leadPartner.title}</p>
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* Services Pills preview */}
+                                    <div className="flex flex-wrap gap-1 mt-2">
+                                      {practice.keyServices.slice(0, 2).map((srv, idx) => (
+                                        <span key={idx} className="text-[10px] text-slate-400 bg-slate-950/60 px-2 py-0.5 rounded border border-slate-800/60 truncate max-w-full">
+                                          • {srv}
+                                        </span>
+                                      ))}
+                                      {practice.keyServices.length > 2 && (
+                                        <span className="text-[10px] text-[#c5a869] px-1 py-0.5">
+                                          +{practice.keyServices.length - 2} {isAr ? 'خدمات إضافية' : 'more'}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {/* Bottom Action Buttons */}
+                                  <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-800">
+                                    <span className="text-[10px] font-mono text-slate-500 truncate max-w-[100px]">
+                                      cat: {practice.category}
+                                    </span>
+
+                                    <div className="flex items-center gap-3">
+                                      <button
+                                        onClick={() => {
+                                          setShowCustomCategoryInput(!PRESET_PRACTICE_CATEGORIES.some(c => c.id === practice.category));
+                                          setEditingPractice(practice);
+                                        }}
+                                        className="text-xs text-[#e5cb8e] hover:underline flex items-center gap-1 cursor-pointer font-medium"
+                                      >
+                                        <Edit3 className="w-3.5 h-3.5" />
+                                        <span>{isAr ? 'تعديل الاختصاص والتصنيف' : 'Edit'}</span>
+                                      </button>
+                                      <button
+                                        onClick={() => handleDeletePractice(practice.id, practice.title)}
+                                        className="text-xs text-rose-400 hover:text-rose-300 hover:underline flex items-center gap-1 cursor-pointer font-medium"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                        <span>{isAr ? 'حذف' : 'Delete'}</span>
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* TAB 4: CASE STUDIES & ACHIEVEMENTS */}
+              {activeTab === 'caseStudies' && (
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-xl font-bold font-serif-title text-white">
+                        {isAr ? 'إدارة الإنجازات والصفقات الكبرى' : 'Landmark Deals & Outcomes Management'}
+                      </h3>
+                      <p className="text-xs text-slate-400">
+                        {isAr ? 'استعراض النزاعات التحكيمية والصفقات المليارية الناجحة' : 'Showcase major arbitrations and multi-million transactions'}
+                      </p>
+                    </div>
+
+                    {!editingCaseStudy && (
+                      <button
+                        onClick={() => setEditingCaseStudy({
+                          id: `case-${Date.now()}`,
+                          title: '',
+                          titleEn: '',
+                          category: 'تحكيم دولي',
+                          outcome: 'حكم نهائي لصالح الموكل',
+                          summary: '',
+                          year: '2026',
+                          value: '$250,000,000',
+                          highlight: 'تمثيل مصرفي دولي'
+                        })}
+                        className="px-4 py-2 rounded-xl bg-[#c5a869] text-slate-950 font-bold text-xs flex items-center gap-1.5 hover:bg-[#d4af37] transition cursor-pointer shadow-lg"
+                      >
+                        <Plus className="w-4 h-4" />
+                        <span>{isAr ? 'إضافة قضية / صفقة' : 'Add Case Study'}</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {editingCaseStudy ? (
+                    <form onSubmit={handleSaveCaseStudy} className="p-6 rounded-2xl bg-slate-900 border border-[#c5a869]/50 space-y-4">
+                      <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                        <h4 className="text-sm font-bold text-white">
+                          {editingCaseStudy.title ? (isAr ? `تعديل القضية / الصفقة: ${editingCaseStudy.title}` : `Edit Case: ${editingCaseStudy.title}`) : (isAr ? 'إضافة قضية / صفقة جديدة' : 'New Case Study')}
+                        </h4>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={handleTranslateCurrentCaseStudy}
+                            disabled={isTranslating}
+                            className="px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-[#e5cb8e] border border-amber-500/50 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50 shadow-sm"
+                            title={isAr ? 'ترجمة فورية وتلقائية للإنجليزية والتركية' : 'Auto-translate to English & Turkish'}
+                          >
+                            {isTranslating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5 text-[#c5a869]" />}
+                            <span>{isAr ? '✨ ترجمة فورية (EN & TR)' : '✨ Translate to EN & TR'}</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setEditingCaseStudy(null)}
+                            className="px-3 py-1.5 rounded-lg bg-slate-800 text-xs text-slate-300 hover:text-white hover:bg-slate-700 transition cursor-pointer"
+                          >
+                            {isAr ? 'إلغاء' : 'Cancel'}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs text-slate-300 mb-1">عنوان القضية / الصفقة *</label>
+                          <input
+                            type="text"
+                            required
+                            value={editingCaseStudy.title}
+                            onChange={(e) => setEditingCaseStudy({ ...editingCaseStudy, title: e.target.value })}
+                            className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs text-slate-300 mb-1">القيمة المالية (Value) *</label>
+                          <input
+                            type="text"
+                            required
+                            value={editingCaseStudy.value || ''}
+                            onChange={(e) => setEditingCaseStudy({ ...editingCaseStudy, value: e.target.value })}
+                            placeholder="$320,000,000"
+                            className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                          <label className="block text-xs text-slate-300 mb-1">التصنيف</label>
+                          <input
+                            type="text"
+                            value={editingCaseStudy.category}
+                            onChange={(e) => setEditingCaseStudy({ ...editingCaseStudy, category: e.target.value })}
+                            className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs text-slate-300 mb-1">النتيجة المحققة *</label>
+                          <input
+                            type="text"
+                            required
+                            value={editingCaseStudy.outcome}
+                            onChange={(e) => setEditingCaseStudy({ ...editingCaseStudy, outcome: e.target.value })}
+                            className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs text-slate-300 mb-1">السنة</label>
+                          <input
+                            type="text"
+                            value={editingCaseStudy.year}
+                            onChange={(e) => setEditingCaseStudy({ ...editingCaseStudy, year: e.target.value })}
+                            className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs text-slate-300 mb-1">ملخص وقائع النزاع / الصفقة *</label>
+                        <textarea
+                          rows={3}
+                          required
+                          value={editingCaseStudy.summary}
+                          onChange={(e) => setEditingCaseStudy({ ...editingCaseStudy, summary: e.target.value })}
+                          className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs"
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-end gap-3 pt-3">
+                        <button
+                          type="button"
+                          onClick={() => setEditingCaseStudy(null)}
+                          className="px-4 py-2 rounded-lg text-slate-400 hover:text-white text-xs"
+                        >
+                          {isAr ? 'إلغاء' : 'Cancel'}
+                        </button>
+                        <button
+                          type="submit"
+                          className="px-6 py-2.5 rounded-lg bg-[#c5a869] text-slate-950 font-bold text-xs hover:bg-[#d4af37] transition flex items-center gap-1.5 shadow-md"
+                        >
+                          <Save className="w-4 h-4" />
+                          <span>{isAr ? 'حفظ الإنجاز' : 'Save Outcome'}</span>
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {caseStudies.map((item) => (
+                        <div key={item.id} className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 flex flex-col justify-between hover:border-[#c5a869]/40 transition">
+                          <div>
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-xs px-2 py-0.5 rounded bg-[#c5a869]/20 text-[#e5cb8e] font-semibold">{item.category}</span>
+                              <span className="text-base font-bold font-serif-title gold-gradient-text">{item.value}</span>
+                            </div>
+                            <h4 className="font-bold text-white text-sm mb-2">{item.title}</h4>
+                            <p className="text-xs text-slate-300 line-clamp-2">{item.summary}</p>
+                          </div>
+
+                          <div className="flex items-center gap-3 mt-4 pt-3 border-t border-slate-800">
+                            <button
+                              onClick={() => setEditingCaseStudy(item)}
+                              className="text-xs text-[#e5cb8e] hover:underline flex items-center gap-1 cursor-pointer"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                              <span>{isAr ? 'تعديل' : 'Edit'}</span>
+                            </button>
+                            <button
+                              onClick={() => handleDeleteCaseStudy(item.id)}
+                              className="text-xs text-rose-400 hover:underline flex items-center gap-1 cursor-pointer"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>{isAr ? 'حذف' : 'Delete'}</span>
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* TAB 5: TESTIMONIALS */}
+              {activeTab === 'testimonials' && (
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-xl font-bold font-serif-title text-white">
+                        {isAr ? 'إدارة آراء وشهادات العملاء' : 'Testimonials Management'}
+                      </h3>
+                      <p className="text-xs text-slate-400">
+                        {isAr ? 'إضافة وتعديل شهادات رؤساء الشركات والمستشارين القانونيين' : 'Manage client reviews and ratings'}
+                      </p>
+                    </div>
+
+                    {!editingTestimonial && (
+                      <button
+                        onClick={() => setEditingTestimonial({
+                          id: `test-${Date.now()}`,
+                          clientName: '',
+                          clientNameEn: '',
+                          clientRole: 'رئيس مجلس الإدارة',
+                          clientRoleEn: 'Chairman of the Board',
+                          company: 'مجموعة استثمارية قابضة',
+                          companyEn: 'Holding Group',
+                          content: '',
+                          contentEn: '',
+                          rating: 5,
+                          avatar: PRESET_PARTNER_IMAGES[3],
+                          caseType: 'نزاع تجاري',
+                          year: '2026'
+                        })}
+                        className="px-4 py-2 rounded-xl bg-[#c5a869] text-slate-950 font-bold text-xs flex items-center gap-1.5 hover:bg-[#d4af37] transition cursor-pointer shadow-lg"
+                      >
+                        <Plus className="w-4 h-4" />
+                        <span>{isAr ? 'إضافة شهادة عميل' : 'Add Testimonial'}</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {editingTestimonial ? (
+                    <form onSubmit={handleSaveTestimonial} className="p-6 rounded-2xl bg-slate-900 border border-[#c5a869]/50 space-y-4">
+                      <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                        <h4 className="text-sm font-bold text-white">
+                          {editingTestimonial.clientName ? (isAr ? `تعديل شهادة: ${editingTestimonial.clientName}` : `Edit Review: ${editingTestimonial.clientName}`) : (isAr ? 'إضافة شهادة عميل جديدة' : 'New Testimonial')}
+                        </h4>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={handleTranslateCurrentTestimonial}
+                            disabled={isTranslating}
+                            className="px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-[#e5cb8e] border border-amber-500/50 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50 shadow-sm"
+                            title={isAr ? 'ترجمة فورية وتلقائية للإنجليزية والتركية' : 'Auto-translate to English & Turkish'}
+                          >
+                            {isTranslating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5 text-[#c5a869]" />}
+                            <span>{isAr ? '✨ ترجمة فورية (EN & TR)' : '✨ Translate to EN & TR'}</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setEditingTestimonial(null)}
+                            className="px-3 py-1.5 rounded-lg bg-slate-800 text-xs text-slate-300 hover:text-white hover:bg-slate-700 transition cursor-pointer"
+                          >
+                            {isAr ? 'إلغاء' : 'Cancel'}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs text-slate-300 mb-1">اسم العميل *</label>
+                          <input
+                            type="text"
+                            required
+                            value={editingTestimonial.clientName}
+                            onChange={(e) => setEditingTestimonial({ ...editingTestimonial, clientName: e.target.value })}
+                            className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-slate-300 mb-1">المنصب والشركة *</label>
+                          <input
+                            type="text"
+                            required
+                            value={editingTestimonial.company}
+                            onChange={(e) => setEditingTestimonial({ ...editingTestimonial, company: e.target.value })}
+                            className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Testimonial Avatar Upload */}
+                      <ImageUploader
+                        value={editingTestimonial.avatar}
+                        onChange={(newImg) => setEditingTestimonial({ ...editingTestimonial, avatar: newImg })}
+                        label="صورة العميل (الشعار أو الصورة الشخصية)"
+                        labelEn="Client Avatar / Company Logo"
+                        lang={lang}
+                        presets={PRESET_PARTNER_IMAGES}
+                        aspectRatio="square"
+                        helpText={isAr ? "ارفع صورة العميل أو شعار شركته من جهازك" : "Upload client avatar or company logo from device"}
+                      />
+
+                      <div>
+                        <label className="block text-xs text-slate-300 mb-1">نص الشهادة والثناء *</label>
+                        <textarea
+                          rows={3}
+                          required
+                          value={editingTestimonial.content}
+                          onChange={(e) => setEditingTestimonial({ ...editingTestimonial, content: e.target.value })}
+                          className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs"
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-end gap-3 pt-3">
+                        <button
+                          type="button"
+                          onClick={() => setEditingTestimonial(null)}
+                          className="px-4 py-2 rounded-lg text-slate-400 hover:text-white text-xs"
+                        >
+                          {isAr ? 'إلغاء' : 'Cancel'}
+                        </button>
+                        <button
+                          type="submit"
+                          className="px-6 py-2.5 rounded-lg bg-[#c5a869] text-slate-950 font-bold text-xs hover:bg-[#d4af37] transition flex items-center gap-1.5 shadow-md"
+                        >
+                          <Save className="w-4 h-4" />
+                          <span>{isAr ? 'حفظ الشهادة' : 'Save Testimonial'}</span>
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {testimonials.map((test) => (
+                        <div key={test.id} className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-[#c5a869]/40 transition">
+                          <h4 className="font-bold text-white text-sm">{test.clientName}</h4>
+                          <p className="text-xs text-[#c5a869]">{test.clientRole} - {test.company}</p>
+                          <p className="text-xs text-slate-300 mt-2 line-clamp-3">"{test.content}"</p>
+
+                          <div className="flex items-center gap-3 mt-4 pt-3 border-t border-slate-800">
+                            <button
+                              onClick={() => setEditingTestimonial(test)}
+                              className="text-xs text-[#e5cb8e] hover:underline flex items-center gap-1 cursor-pointer"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                              <span>{isAr ? 'تعديل' : 'Edit'}</span>
+                            </button>
+                            <button
+                              onClick={() => handleDeleteTestimonial(test.id)}
+                              className="text-xs text-rose-400 hover:underline flex items-center gap-1 cursor-pointer"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>{isAr ? 'حذف' : 'Delete'}</span>
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* TAB 6: BLOG */}
+              {activeTab === 'blog' && (
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-xl font-bold font-serif-title text-white">
+                        {isAr ? 'إدارة المقالات والأخبار القانونية' : 'Legal Blog & Insights'}
+                      </h3>
+                      <p className="text-xs text-slate-400">
+                        {isAr ? 'نشر مقالات الرأي والتحليلات القانونية والدراسات التشريعية' : 'Publish insights, articles and regulatory reviews'}
+                      </p>
+                    </div>
+
+                    {!editingBlog && (
+                      <button
+                        onClick={() => setEditingBlog({
+                          id: `blog-${Date.now()}`,
+                          title: '',
+                          titleEn: '',
+                          slug: `article-${Date.now()}`,
+                          category: 'قانون الشركات والاستثمار',
+                          excerpt: '',
+                          content: '',
+                          authorName: partners[0]?.name || 'د. عبد الرحمن آل هلال',
+                          authorRole: 'الشريك المؤسس',
+                          date: new Date().toLocaleDateString(isAr ? 'ar-SA' : 'en-US'),
+                          readTime: '5 دقائق',
+                          image: PRESET_PRACTICE_IMAGES[1],
+                          tags: ['أنظمة', 'استثمار', 'حوكمة']
+                        })}
+                        className="px-4 py-2 rounded-xl bg-[#c5a869] text-slate-950 font-bold text-xs flex items-center gap-1.5 hover:bg-[#d4af37] transition cursor-pointer shadow-lg"
+                      >
+                        <Plus className="w-4 h-4" />
+                        <span>{isAr ? 'نشر مقال جديد' : 'New Article'}</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {editingBlog ? (
+                    <form onSubmit={handleSaveBlog} className="p-6 rounded-2xl bg-slate-900 border border-[#c5a869]/50 space-y-4">
+                      <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                        <h4 className="text-sm font-bold text-white">
+                          {editingBlog.title ? (isAr ? `تعديل المقال: ${editingBlog.title}` : `Edit Article: ${editingBlog.title}`) : (isAr ? 'كتابة ونشر مقال قانوني جديد' : 'New Legal Article')}
+                        </h4>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={handleTranslateCurrentBlog}
+                            disabled={isTranslating}
+                            className="px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-[#e5cb8e] border border-amber-500/50 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50 shadow-sm"
+                            title={isAr ? 'ترجمة فورية وتلقائية للإنجليزية والتركية' : 'Auto-translate to English & Turkish'}
+                          >
+                            {isTranslating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5 text-[#c5a869]" />}
+                            <span>{isAr ? '✨ ترجمة فورية (EN & TR)' : '✨ Translate to EN & TR'}</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setEditingBlog(null)}
+                            className="px-3 py-1.5 rounded-lg bg-slate-800 text-xs text-slate-300 hover:text-white hover:bg-slate-700 transition cursor-pointer"
+                          >
+                            {isAr ? 'إلغاء' : 'Cancel'}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs text-slate-300 mb-1">عنوان المقال *</label>
+                        <input
+                          type="text"
+                          required
+                          value={editingBlog.title}
+                          onChange={(e) => setEditingBlog({ ...editingBlog, title: e.target.value })}
+                          className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs text-slate-300 mb-1">الكاتب (الشريك) *</label>
+                          <input
+                            type="text"
+                            required
+                            value={editingBlog.authorName}
+                            onChange={(e) => setEditingBlog({ ...editingBlog, authorName: e.target.value })}
+                            className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-slate-300 mb-1">التصنيف</label>
+                          <input
+                            type="text"
+                            value={editingBlog.category}
+                            onChange={(e) => setEditingBlog({ ...editingBlog, category: e.target.value })}
+                            className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Blog Cover Upload */}
+                      <ImageUploader
+                        value={editingBlog.image}
+                        onChange={(newImg) => setEditingBlog({ ...editingBlog, image: newImg })}
+                        label="صورة غلاف المقال"
+                        labelEn="Article Cover Image"
+                        lang={lang}
+                        presets={PRESET_PRACTICE_IMAGES}
+                        aspectRatio="video"
+                        helpText={isAr ? "ارفع صورة غلاف المقال من جهازك" : "Upload article cover image from device"}
+                      />
+
+                      <div>
+                        <label className="block text-xs text-slate-300 mb-1">الموجز *</label>
+                        <textarea
+                          rows={2}
+                          required
+                          value={editingBlog.excerpt}
+                          onChange={(e) => setEditingBlog({ ...editingBlog, excerpt: e.target.value })}
+                          className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs text-slate-300 mb-1">المحتوى الكامل للمقال *</label>
+                        <textarea
+                          rows={6}
+                          required
+                          value={editingBlog.content}
+                          onChange={(e) => setEditingBlog({ ...editingBlog, content: e.target.value })}
+                          className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs"
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-end gap-3 pt-3">
+                        <button
+                          type="button"
+                          onClick={() => setEditingBlog(null)}
+                          className="px-4 py-2 rounded-lg text-slate-400 hover:text-white text-xs"
+                        >
+                          {isAr ? 'إلغاء' : 'Cancel'}
+                        </button>
+                        <button
+                          type="submit"
+                          className="px-6 py-2.5 rounded-lg bg-[#c5a869] text-slate-950 font-bold text-xs hover:bg-[#d4af37] transition flex items-center gap-1.5 shadow-md"
+                        >
+                          <Save className="w-4 h-4" />
+                          <span>{isAr ? 'حفظ ونشر المقال' : 'Publish Article'}</span>
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <div className="space-y-3">
+                      {blogPosts.map((post) => (
+                        <div key={post.id} className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-between hover:border-[#c5a869]/40 transition">
+                          <div>
+                            <h4 className="font-bold text-white text-sm">{post.title}</h4>
+                            <p className="text-xs text-slate-400">{post.authorName} • {post.date} • {post.category}</p>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => setEditingBlog(post)}
+                              className="text-xs text-[#e5cb8e] hover:underline p-1.5 cursor-pointer"
+                            >
+                              <Edit3 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteBlog(post.id)}
+                              className="text-xs text-rose-400 hover:underline p-1.5 cursor-pointer"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* TAB 7: GLOBAL OFFICES */}
+              {activeTab === 'offices' && (
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-xl font-bold font-serif-title text-white">
+                        {isAr ? 'إدارة المقار الدولية والخرائط' : 'Global Offices & Maps Management'}
+                      </h3>
+                      <p className="text-xs text-slate-400">
+                        {isAr ? 'إضافة مقار المكتب في المدن والعواصم العالمية مع خرائط Google Maps' : 'Manage global office coordinates and embed maps'}
+                      </p>
+                    </div>
+
+                    {!editingOffice && (
+                      <button
+                        onClick={() => setEditingOffice({
+                          id: `office-${Date.now()}`,
+                          cityAr: 'جدة',
+                          cityEn: 'Jeddah',
+                          countryAr: 'المملكة العربية السعودية',
+                          countryEn: 'Saudi Arabia',
+                          addressAr: 'طريق الكورنيش، برج الشاطئ، الطابق 15',
+                          addressEn: 'Corniche Road, Beach Tower, 15th Floor',
+                          phone: '+966 12 345 6789',
+                          email: 'jeddah@aladllaw.com',
+                          mapEmbedUrl: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d238130.158784!2d39.172778!3d21.543333!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x15c3d01fb1137e59%3A0xe059579737b118db!2sJeddah!5e0!3m2!1sen!2ssa!4v1700000000000',
+                          isHeadquarter: false
+                        })}
+                        className="px-4 py-2 rounded-xl bg-[#c5a869] text-slate-950 font-bold text-xs flex items-center gap-1.5 hover:bg-[#d4af37] transition cursor-pointer shadow-lg"
+                      >
+                        <Plus className="w-4 h-4" />
+                        <span>{isAr ? 'إضافة مقر جديد' : 'Add Office'}</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {editingOffice ? (
+                    <form onSubmit={handleSaveOffice} className="p-6 rounded-2xl bg-slate-900 border border-[#c5a869]/50 space-y-4">
+                      <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                        <h4 className="text-sm font-bold text-white">
+                          {editingOffice.cityAr ? (isAr ? `تعديل مقر: ${editingOffice.cityAr}` : `Edit Office: ${editingOffice.cityAr}`) : (isAr ? 'إضافة مقر مكتب جديد' : 'New Office')}
+                        </h4>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={handleTranslateCurrentOffice}
+                            disabled={isTranslating}
+                            className="px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-[#e5cb8e] border border-amber-500/50 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50 shadow-sm"
+                            title={isAr ? 'ترجمة فورية وتلقائية للإنجليزية والتركية' : 'Auto-translate to English & Turkish'}
+                          >
+                            {isTranslating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5 text-[#c5a869]" />}
+                            <span>{isAr ? '✨ ترجمة فورية (EN & TR)' : '✨ Translate to EN & TR'}</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setEditingOffice(null)}
+                            className="px-3 py-1.5 rounded-lg bg-slate-800 text-xs text-slate-300 hover:text-white hover:bg-slate-700 transition cursor-pointer"
+                          >
+                            {isAr ? 'إلغاء' : 'Cancel'}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs text-slate-300 mb-1">المدينة (عربي) *</label>
+                          <input
+                            type="text"
+                            required
+                            value={editingOffice.cityAr}
+                            onChange={(e) => setEditingOffice({ ...editingOffice, cityAr: e.target.value })}
+                            className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-slate-300 mb-1">City (English) *</label>
+                          <input
+                            type="text"
+                            required
+                            value={editingOffice.cityEn}
+                            onChange={(e) => setEditingOffice({ ...editingOffice, cityEn: e.target.value })}
+                            className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs text-slate-300 mb-1">الهاتف *</label>
+                          <input
+                            type="text"
+                            required
+                            value={editingOffice.phone}
+                            onChange={(e) => setEditingOffice({ ...editingOffice, phone: e.target.value })}
+                            className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs font-mono"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-slate-300 mb-1">البريد الإلكتروني *</label>
+                          <input
+                            type="email"
+                            required
+                            value={editingOffice.email}
+                            onChange={(e) => setEditingOffice({ ...editingOffice, email: e.target.value })}
+                            className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs text-slate-300 mb-1">العنوان التفصيلي (عربي) *</label>
+                        <input
+                          type="text"
+                          required
+                          value={editingOffice.addressAr}
+                          onChange={(e) => setEditingOffice({ ...editingOffice, addressAr: e.target.value })}
+                          className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs text-slate-300 mb-1">رابط تضمين Google Maps (Embed URL)</label>
+                        <input
+                          type="url"
+                          value={editingOffice.mapEmbedUrl}
+                          onChange={(e) => setEditingOffice({ ...editingOffice, mapEmbedUrl: e.target.value })}
+                          className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs font-mono text-[11px]"
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-end gap-3 pt-3">
+                        <button
+                          type="button"
+                          onClick={() => setEditingOffice(null)}
+                          className="px-4 py-2 rounded-lg text-slate-400 hover:text-white text-xs"
+                        >
+                          {isAr ? 'إلغاء' : 'Cancel'}
+                        </button>
+                        <button
+                          type="submit"
+                          className="px-6 py-2.5 rounded-lg bg-[#c5a869] text-slate-950 font-bold text-xs hover:bg-[#d4af37] transition flex items-center gap-1.5 shadow-md"
+                        >
+                          <Save className="w-4 h-4" />
+                          <span>{isAr ? 'حفظ المقر' : 'Save Office'}</span>
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {offices.map((office) => (
+                        <div key={office.id} className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-[#c5a869]/40 transition">
+                          <div className="flex items-center justify-between mb-2">
+                            <h4 className="font-bold text-white text-sm">{office.cityAr} - {office.countryAr}</h4>
+                            {office.isHeadquarter && (
+                              <span className="text-[10px] px-2 py-0.5 rounded bg-[#c5a869] text-slate-950 font-bold">المقر الرئيسي</span>
+                            )}
+                          </div>
+                          <p className="text-xs text-slate-300">{office.addressAr}</p>
+                          <p className="text-xs text-[#c5a869] font-mono mt-1">{office.phone}</p>
+
+                          <div className="flex items-center gap-3 mt-4 pt-3 border-t border-slate-800">
+                            <button
+                              onClick={() => setEditingOffice(office)}
+                              className="text-xs text-[#e5cb8e] hover:underline flex items-center gap-1 cursor-pointer"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                              <span>{isAr ? 'تعديل' : 'Edit'}</span>
+                            </button>
+                            <button
+                              onClick={() => handleDeleteOffice(office.id)}
+                              className="text-xs text-rose-400 hover:underline flex items-center gap-1 cursor-pointer"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>{isAr ? 'حذف' : 'Delete'}</span>
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* TAB 8: IDENTITY & SITE SETTINGS */}
+              {activeTab === 'settings' && (
+                <form onSubmit={handleSaveSettings} className="space-y-6 max-w-4xl">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div>
+                      <h3 className="text-xl font-bold font-serif-title text-white">
+                        {isAr ? 'تسمية المكتب، الهوية الرسمية، والإحصائيات' : 'Law Firm Name, Official Branding & Statistics'}
+                      </h3>
+                      <p className="text-xs text-slate-400">
+                        {isAr ? 'خصص اسم مكتبك القانوني، الشعار، الرمز الرسمي، والنبذة التعريفية' : 'Customize your law firm name, logos, slogans, and metadata'}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleTranslateCurrentSettings}
+                        disabled={isTranslating}
+                        className="px-3.5 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-[#e5cb8e] border border-amber-500/50 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50 shadow-sm"
+                        title={isAr ? 'ترجمة فورية وتلقائية لكافة نصوص وإعدادات وهوية الموقع' : 'Auto-translate all settings text'}
+                      >
+                        {isTranslating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5 text-[#c5a869]" />}
+                        <span>{isAr ? '✨ ترجمة إعدادات الموقع (EN & TR)' : '✨ Translate Settings'}</span>
+                      </button>
+
+                      <button
+                        type="submit"
+                        className="px-5 py-1.5 rounded-xl bg-gradient-to-r from-[#c5a869] to-[#d4af37] text-slate-950 font-bold text-xs flex items-center gap-1.5 hover:brightness-110 transition cursor-pointer shadow-md"
+                      >
+                        <Save className="w-4 h-4" />
+                        <span>{isAr ? 'حفظ وتطبيق' : 'Save'}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Multi-Language & Translation Control Card */}
+                  <div className="p-5 rounded-2xl bg-gradient-to-r from-slate-900 via-slate-900 to-amber-950/30 border border-amber-500/40 shadow-xl space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-300">
+                          <Languages className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                            <span>{isAr ? 'مزامنة وترجمة اللغات الثلاث (العربية - الإنجليزية - التركية)' : 'Multi-Language Sync & Auto-Translation (AR - EN - TR)'}</span>
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                              {isAr ? 'نظام ذكي متصل' : 'Connected'}
+                            </span>
+                          </h4>
+                          <p className="text-[11px] text-slate-400">
+                            {isAr 
+                              ? 'عند تعديل أي بيان بالعربية، يتم تحديث وترجمة باقي اللغات (الإنجليزية والتركية) تلقائياً ودون الحاجة لإعادة كتابتها يدوياً.' 
+                              : 'Editing any Arabic content automatically synchronizes and updates English & Turkish translations.'}
+                          </p>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={handleBulkAutoTranslateAll}
+                        disabled={isTranslating || !!bulkTranslateProgress}
+                        className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-[#c5a869] hover:from-amber-400 hover:to-[#d4af37] text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-lg transition cursor-pointer disabled:opacity-50"
+                      >
+                        <Sparkles className="w-4 h-4 text-slate-950" />
+                        <span>{isAr ? '⚡ ترجمة كل الموقع دفعة واحدة' : '⚡ Bulk Translate All'}</span>
+                      </button>
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-300">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={autoSyncEnabled}
+                          onChange={(e) => setAutoSyncEnabled(e.target.checked)}
+                          className="rounded bg-slate-950 border-slate-700 text-[#c5a869] focus:ring-0 w-4 h-4 cursor-pointer"
+                        />
+                        <span className="font-semibold text-slate-200">
+                          {isAr ? 'تفعيل الترجمة والمزامنة التلقائية عند الحفظ (Auto-sync on save)' : 'Enable auto-translate on save'}
+                        </span>
+                      </label>
+
+                      <div className="flex items-center gap-1.5 text-[11px] text-[#e5cb8e]">
+                        <span>🇸🇦 العربية (الأصل)</span>
+                        <span>➡️</span>
+                        <span>🇬🇧 English</span>
+                        <span>➕</span>
+                        <span>🇹🇷 Türkçe</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Firm Names & Slogans */}
+                  <div className="p-5 rounded-2xl bg-slate-900 border border-[#c5a869]/40 space-y-4 shadow-lg">
+                    <h4 className="text-xs font-bold text-[#e5cb8e] uppercase tracking-wider flex items-center gap-2">
+                      <Building className="w-4 h-4 text-[#c5a869]" />
+                      <span>{isAr ? 'اسم المكتب القانوني والشعارات الرسمية' : 'Firm Name & Official Slogans'}</span>
+                    </h4>
+
+                    {/* Presets */}
+                    <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800 space-y-2">
+                      <span className="text-[11px] text-slate-400 font-medium flex items-center gap-1">
+                        <Sparkles className="w-3 h-3 text-[#c5a869]" />
+                        <span>{isAr ? 'نماذج وقوالب جاهزة للتسمية السريعة:' : 'Quick Presets:'}</span>
+                      </span>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setSettings({
+                            ...settings,
+                            firmNameAr: 'مكتب المحامي محمد النحوي للمحاماة والاستشارات القانونية',
+                            firmNameEn: 'Nahwi Law Firm & Legal Consultations',
+                            sloganAr: 'حماية حقوقكم، أولويتنا وصناعة ريادتكم القانونية',
+                            sloganEn: 'Safeguarding Your Rights, Pioneering Your Legal Success',
+                            subSloganAr: 'خبرة عريقة في الترافع أمام كافة المحاكم وتقديم الاستشارات النوعية للأفراد والشركات بأعلى معايير الأمانة والسرية.',
+                            subSloganEn: 'Distinguished experience in judicial advocacy and tailored legal advisory with the highest standards of integrity.',
+                          })}
+                          className="p-2 rounded-lg bg-slate-900 border border-slate-700 hover:border-[#c5a869] text-start text-[11px] text-slate-200 hover:text-white transition cursor-pointer"
+                        >
+                          <span className="font-bold text-[#e5cb8e] block">مكتب محاماة فردي</span>
+                          <span className="text-slate-400 text-[10px] truncate block">مكتب المحامي محمد النحوي</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setSettings({
+                            ...settings,
+                            firmNameAr: 'شركة النخبة والعدالة للمحاماة والتحكيم الدولي',
+                            firmNameEn: 'Al-Nokhba & Justice International Law Firm',
+                            sloganAr: 'حلول قانونية استراتيجية واستشارات تجارية عابرة للحدود',
+                            sloganEn: 'Strategic Legal Solutions & Cross-Border Advisory',
+                            subSloganAr: 'تحالف قانوني يضم نخبة من كبار المحامين والمحكّمين المعتمدين لحماية الاستثمارات وإدارة الصفقات الكبرى.',
+                            subSloganEn: 'A premier legal alliance of accredited attorneys and arbitrators securing investments and complex transactions.',
+                          })}
+                          className="p-2 rounded-lg bg-slate-900 border border-slate-700 hover:border-[#c5a869] text-start text-[11px] text-slate-200 hover:text-white transition cursor-pointer"
+                        >
+                          <span className="font-bold text-[#e5cb8e] block">شركة مهنية وشراكة</span>
+                          <span className="text-slate-400 text-[10px] truncate block">شركة النخبة والعدالة</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setSettings({
+                            ...settings,
+                            firmNameAr: 'مجموعة النبراس للاستشارات القانونية وحوكمة الشركات',
+                            firmNameEn: 'Al-Nebras Corporate Governance & Legal Advisory',
+                            sloganAr: 'الحصن القانوني المتكامل لنمو الأعمال وحماية رأس المال',
+                            sloganEn: 'The Comprehensive Legal Fortress for Enterprise Growth',
+                            subSloganAr: 'نقدم استشارات متقدمة في حوكمة الشركات، الاندماج والاستحواذ، وصياغة العقود التجارية الدولية المعقدة.',
+                            subSloganEn: 'Pioneering corporate governance, M&A structuring, and international contract drafting.',
+                          })}
+                          className="p-2 rounded-lg bg-slate-900 border border-slate-700 hover:border-[#c5a869] text-start text-[11px] text-slate-200 hover:text-white transition cursor-pointer"
+                        >
+                          <span className="font-bold text-[#e5cb8e] block">مجموعة حوكمة واستثمار</span>
+                          <span className="text-slate-400 text-[10px] truncate block">مجموعة النبراس للاستشارات</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-200 mb-1">اسم المكتب بالعربية *</label>
+                        <input
+                          type="text"
+                          required
+                          value={settings.firmNameAr}
+                          onChange={(e) => setSettings({ ...settings, firmNameAr: e.target.value })}
+                          className="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869]"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-200 mb-1">Firm Name in English *</label>
+                        <input
+                          type="text"
+                          required
+                          value={settings.firmNameEn}
+                          onChange={(e) => setSettings({ ...settings, firmNameEn: e.target.value })}
+                          className="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869]"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-semibold text-[#e5cb8e] mb-1">
+                          {isAr ? 'الشعار اللفظي الرئيسي / العنوان الأبرز في الواجهة (عربي) *' : 'Main Slogan / Hero Headline (Arabic) *'}
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={settings.sloganAr}
+                          onChange={(e) => setSettings({ ...settings, sloganAr: e.target.value })}
+                          placeholder="مثال: حماية حقوقكم أولويتنا، وصناعة ريادتكم القانونية"
+                          className="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869] focus:outline-none"
+                        />
+                        <p className="text-[10px] text-slate-400 mt-1">
+                          {isAr ? 'هذا النص يظهر كعنوان رئيسي عريض في أعلى الصفحة الرئيسية' : 'Displays as the prominent main title in the hero section'}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-[#e5cb8e] mb-1">
+                          {isAr ? 'Main Slogan / Hero Headline (English) *' : 'Main Slogan (English) *'}
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={settings.sloganEn}
+                          onChange={(e) => setSettings({ ...settings, sloganEn: e.target.value })}
+                          placeholder="e.g. Safeguarding Your Rights, Pioneering Your Legal Success"
+                          className="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869] focus:outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-300 mb-1">
+                        {isAr ? 'العبارة التعريفية الفرعية في الواجهة (Sub-slogan)' : 'Hero Sub-headline'}
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={settings.subSloganAr}
+                        onChange={(e) => setSettings({ ...settings, subSloganAr: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869] focus:outline-none"
+                      />
+                    </div>
+
+                    {/* Logo Customizer */}
+                    <div className="pt-2">
+                      <ImageUploader
+                        value={settings.customLogoUrl || ''}
+                        onChange={(img) => setSettings({ ...settings, customLogoUrl: img })}
+                        label={isAr ? "شعار المكتب الرسمي (صورة الشعار أو الرمز المعماري)" : "Official Firm Logo"}
+                        labelEn="Official Law Firm Logo (Image / Emblem)"
+                        lang={lang}
+                        aspectRatio="square"
+                        helpText={isAr ? "ارفع ملف الشعار الخاص بمكتبك ليظهر فوراً في الترويسة العلوية، الواجهة الرئيسية، والفوتر." : "Upload custom logo to appear in navbar, hero, and footer."}
+                      />
+                    </div>
+
+                    {/* Logo & Firm Name Sizing & Placement Control Suite */}
+                    <div className="p-5 rounded-2xl bg-slate-900/90 border border-[#c5a869]/40 space-y-6 mt-4">
+                      <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                        <div className="flex items-center gap-2">
+                          <Sliders className="w-4 h-4 text-[#e5cb8e]" />
+                          <h4 className="text-xs sm:text-sm font-bold text-white">
+                            {isAr ? 'التحكم المتقدم بحجم وتموضع اللوغو واسم المكتب' : 'Logo & Firm Name Sizing & Placement'}
+                          </h4>
+                        </div>
+                        <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-[#c5a869]/20 text-[#e5cb8e] font-semibold">
+                          {isAr ? 'تخصيص فوري' : 'Live Customization'}
+                        </span>
+                      </div>
+
+                      {/* Live Visual Preview */}
+                      <div className="p-4 rounded-xl bg-[#fbf8f2] border border-[#e6ddcc] text-[#181512]">
+                        <div className="flex items-center justify-between text-[11px] font-bold text-[#87641d] mb-3 pb-1.5 border-b border-[#e6ddcc]">
+                          <span className="flex items-center gap-1.5">
+                            <Eye className="w-3.5 h-3.5" />
+                            {isAr ? 'معاينة حية لشكل اللوغو واسم المكتب في الترويسة' : 'Live Preview in Header'}
+                          </span>
+                          <span className="text-[10px] text-[#4b4334]">
+                            {isAr ? 'حسب الإعدادات المحددة أدناه' : 'According to selected settings below'}
+                          </span>
+                        </div>
+
+                        <div className={`p-3 rounded-lg bg-white border border-[#e6ddcc]/80 flex items-center ${
+                          settings.brandingPositionNavbar === 'center' ? 'justify-center text-center' : 'justify-start'
+                        }`}>
+                          <div className={`flex items-center ${
+                            settings.brandingLayout === 'vertical' ? 'flex-col text-center gap-1.5' : 'flex-row gap-3'
+                          }`}>
+                            {/* Logo */}
+                            {(() => {
+                              const sizeMap = { sm: 'w-8 h-8', md: 'w-11 h-11', lg: 'w-14 h-14', xl: 'w-16 h-16' };
+                              const logoSizeClass = sizeMap[settings.logoSizeNavbar || 'md'];
+                              const shapeClass = settings.logoShape === 'circle'
+                                ? 'rounded-full'
+                                : settings.logoShape === 'square'
+                                ? 'rounded-none'
+                                : settings.logoShape === 'transparent'
+                                ? 'rounded-none bg-transparent shadow-none p-0 border-none'
+                                : 'rounded-xl';
+
+                              const innerShapeClass = settings.logoShape === 'circle'
+                                ? 'rounded-full'
+                                : settings.logoShape === 'square'
+                                ? 'rounded-none'
+                                : settings.logoShape === 'transparent'
+                                ? 'bg-transparent'
+                                : 'rounded-[9px]';
+
+                              if (settings.logoShape === 'transparent') {
+                                return (
+                                  <div className={`${logoSizeClass} flex items-center justify-center overflow-hidden flex-shrink-0`}>
+                                    {settings.customLogoUrl ? (
+                                      <img src={settings.customLogoUrl} alt="Logo" className="w-full h-full object-contain" />
+                                    ) : (
+                                      <Scale className="w-full h-full text-[#87641d] p-1" />
+                                    )}
+                                  </div>
+                                );
+                              }
+
+                              return (
+                                <div className={`${logoSizeClass} ${shapeClass} bg-gradient-to-br from-[#c5a869] to-[#8d6f2c] p-0.5 shadow-sm flex-shrink-0`}>
+                                  <div className={`w-full h-full bg-[#fbf8f2] ${innerShapeClass} flex items-center justify-center overflow-hidden p-0.5`}>
+                                    {settings.customLogoUrl ? (
+                                      <img src={settings.customLogoUrl} alt="Logo" className="w-full h-full object-contain" />
+                                    ) : (
+                                      <Scale className="w-5 h-5 text-[#87641d]" />
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })()}
+
+                            {/* Name & Subtitle */}
+                            <div className={`flex flex-col ${settings.brandingLayout === 'vertical' ? 'items-center text-center' : 'items-start'}`}>
+                              {(() => {
+                                const sizeMap = { sm: 'text-sm sm:text-base', md: 'text-base sm:text-lg', lg: 'text-lg sm:text-xl', xl: 'text-xl sm:text-2xl' };
+                                const weightMap = { normal: 'font-normal', semibold: 'font-semibold', bold: 'font-bold', extrabold: 'font-extrabold' };
+                                return (
+                                  <span className={`font-serif-title ${weightMap[settings.firmNameWeightNavbar || 'bold']} ${sizeMap[settings.firmNameSizeNavbar || 'md']} text-[#181512] leading-tight`}>
+                                    {isAr ? (settings.firmNameAr || 'اسم مكتب المحاماة') : (settings.firmNameEn || 'Law Firm Name')}
+                                  </span>
+                                );
+                              })()}
+
+                              {settings.showNavbarSubtitle !== false && (
+                                <span className="text-[10px] text-[#87641d] uppercase tracking-wider font-bold mt-0.5">
+                                  {isAr ? (settings.navbarSubtitleAr || 'محامون ومستشارون قانونيون ومحكّمون') : (settings.navbarSubtitleEn || 'Attorneys, Legal Counsel & Arbitrators')}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Controls Grid */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        {/* 1. Navbar Logo Size */}
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-200 mb-1.5 flex items-center gap-1.5">
+                            <Maximize2 className="w-3.5 h-3.5 text-[#c5a869]" />
+                            {isAr ? 'حجم اللوغو في الترويسة العلوية (Navbar Logo Size)' : 'Header Logo Size'}
+                          </label>
+                          <div className="grid grid-cols-4 gap-1.5">
+                            {[
+                              { id: 'sm', labelAr: 'صغير (36px)', labelEn: 'Small' },
+                              { id: 'md', labelAr: 'متوسط (44px)', labelEn: 'Medium' },
+                              { id: 'lg', labelAr: 'كبير (54px)', labelEn: 'Large' },
+                              { id: 'xl', labelAr: 'ضخم (68px)', labelEn: 'X-Large' },
+                            ].map((sz) => (
+                              <button
+                                key={sz.id}
+                                type="button"
+                                onClick={() => setSettings({ ...settings, logoSizeNavbar: sz.id as any })}
+                                className={`py-2 px-1 rounded-xl text-center text-xs font-semibold transition cursor-pointer border ${
+                                  (settings.logoSizeNavbar || 'md') === sz.id
+                                    ? 'bg-[#c5a869] text-black border-[#e5cb8e] shadow-md font-bold'
+                                    : 'bg-slate-950 text-slate-300 border-slate-800 hover:border-slate-600'
+                                }`}
+                              >
+                                {isAr ? sz.labelAr : sz.labelEn}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* 2. Hero Logo Size */}
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-200 mb-1.5 flex items-center gap-1.5">
+                            <Sparkles className="w-3.5 h-3.5 text-[#c5a869]" />
+                            {isAr ? 'حجم اللوغو في الواجهة الرئيسية (Hero Logo Size)' : 'Hero Banner Logo Size'}
+                          </label>
+                          <div className="grid grid-cols-5 gap-1">
+                            {[
+                              { id: 'sm', labelAr: 'صغير', labelEn: 'SM' },
+                              { id: 'md', labelAr: 'متوسط', labelEn: 'MD' },
+                              { id: 'lg', labelAr: 'كبير', labelEn: 'LG' },
+                              { id: 'xl', labelAr: 'ضخم', labelEn: 'XL' },
+                              { id: 'hidden', labelAr: 'إخفاء', labelEn: 'Hide' },
+                            ].map((sz) => (
+                              <button
+                                key={sz.id}
+                                type="button"
+                                onClick={() => setSettings({ ...settings, logoSizeHero: sz.id as any })}
+                                className={`py-2 px-1 rounded-xl text-center text-[11px] font-semibold transition cursor-pointer border ${
+                                  (settings.logoSizeHero || 'md') === sz.id
+                                    ? 'bg-[#c5a869] text-black border-[#e5cb8e] shadow-md font-bold'
+                                    : 'bg-slate-950 text-slate-300 border-slate-800 hover:border-slate-600'
+                                }`}
+                              >
+                                {isAr ? sz.labelAr : sz.labelEn}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* 3. Logo Container Frame Shape */}
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-200 mb-1.5 flex items-center gap-1.5">
+                            <Layout className="w-3.5 h-3.5 text-[#c5a869]" />
+                            {isAr ? 'شكل إطار اللوغو والخلفية (Logo Frame & Shape)' : 'Logo Shape & Frame'}
+                          </label>
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                            {[
+                              { id: 'rounded', labelAr: 'مربع ناعم', labelEn: 'Rounded Box' },
+                              { id: 'circle', labelAr: 'دائري', labelEn: 'Circle' },
+                              { id: 'square', labelAr: 'مربع كلاسيكي', labelEn: 'Square' },
+                              { id: 'transparent', labelAr: 'شفاف بدون إطار', labelEn: 'Transparent' },
+                            ].map((shp) => (
+                              <button
+                                key={shp.id}
+                                type="button"
+                                onClick={() => setSettings({ ...settings, logoShape: shp.id as any })}
+                                className={`py-2 px-1.5 rounded-xl text-center text-xs font-semibold transition cursor-pointer border ${
+                                  (settings.logoShape || 'rounded') === shp.id
+                                    ? 'bg-[#c5a869] text-black border-[#e5cb8e] shadow-md font-bold'
+                                    : 'bg-slate-950 text-slate-300 border-slate-800 hover:border-slate-600'
+                                }`}
+                              >
+                                {isAr ? shp.labelAr : shp.labelEn}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* 4. Logo & Name Layout Alignment */}
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-200 mb-1.5 flex items-center gap-1.5">
+                            <Move className="w-3.5 h-3.5 text-[#c5a869]" />
+                            {isAr ? 'ترتيب اللوغو مع اسم المكتب (Layout Orientation)' : 'Logo & Name Orientation'}
+                          </label>
+                          <div className="grid grid-cols-2 gap-1.5">
+                            {[
+                              { id: 'horizontal', labelAr: 'أفقي (اللوغو بجانب الاسم)', labelEn: 'Side by Side (Horizontal)' },
+                              { id: 'vertical', labelAr: 'عمودي (اللوغو فوق الاسم)', labelEn: 'Stacked (Vertical)' },
+                            ].map((lay) => (
+                              <button
+                                key={lay.id}
+                                type="button"
+                                onClick={() => setSettings({ ...settings, brandingLayout: lay.id as any })}
+                                className={`py-2 px-2 rounded-xl text-center text-xs font-semibold transition cursor-pointer border ${
+                                  (settings.brandingLayout || 'horizontal') === lay.id
+                                    ? 'bg-[#c5a869] text-black border-[#e5cb8e] shadow-md font-bold'
+                                    : 'bg-slate-950 text-slate-300 border-slate-800 hover:border-slate-600'
+                                }`}
+                              >
+                                {isAr ? lay.labelAr : lay.labelEn}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* 5. Header Branding Position */}
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-200 mb-1.5 flex items-center gap-1.5">
+                            <AlignCenter className="w-3.5 h-3.5 text-[#c5a869]" />
+                            {isAr ? 'مكان تموضع الترويسة في الشريط العلوي' : 'Navbar Alignment'}
+                          </label>
+                          <div className="grid grid-cols-2 gap-1.5">
+                            {[
+                              { id: 'start', labelAr: 'على طرف الشريط (الوضع القياسي)', labelEn: 'Standard Start / Corner' },
+                              { id: 'center', labelAr: 'في المنتصف (توسيط الشعار والاسم)', labelEn: 'Centered in Navbar' },
+                            ].map((pos) => (
+                              <button
+                                key={pos.id}
+                                type="button"
+                                onClick={() => setSettings({ ...settings, brandingPositionNavbar: pos.id as any })}
+                                className={`py-2 px-2 rounded-xl text-center text-xs font-semibold transition cursor-pointer border ${
+                                  (settings.brandingPositionNavbar || 'start') === pos.id
+                                    ? 'bg-[#c5a869] text-black border-[#e5cb8e] shadow-md font-bold'
+                                    : 'bg-slate-950 text-slate-300 border-slate-800 hover:border-slate-600'
+                                }`}
+                              >
+                                {isAr ? pos.labelAr : pos.labelEn}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* 6. Firm Name Font Size in Navbar */}
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-200 mb-1.5 flex items-center gap-1.5">
+                            <Type className="w-3.5 h-3.5 text-[#c5a869]" />
+                            {isAr ? 'حجم خط اسم المكتب في الترويسة' : 'Firm Name Font Size'}
+                          </label>
+                          <div className="grid grid-cols-4 gap-1.5">
+                            {[
+                              { id: 'sm', labelAr: 'صغير', labelEn: 'Small' },
+                              { id: 'md', labelAr: 'متوسط', labelEn: 'Medium' },
+                              { id: 'lg', labelAr: 'كبير', labelEn: 'Large' },
+                              { id: 'xl', labelAr: 'كبير جداً', labelEn: 'X-Large' },
+                            ].map((sz) => (
+                              <button
+                                key={sz.id}
+                                type="button"
+                                onClick={() => setSettings({ ...settings, firmNameSizeNavbar: sz.id as any })}
+                                className={`py-2 px-1 rounded-xl text-center text-xs font-semibold transition cursor-pointer border ${
+                                  (settings.firmNameSizeNavbar || 'md') === sz.id
+                                    ? 'bg-[#c5a869] text-black border-[#e5cb8e] shadow-md font-bold'
+                                    : 'bg-slate-950 text-slate-300 border-slate-800 hover:border-slate-600'
+                                }`}
+                              >
+                                {isAr ? sz.labelAr : sz.labelEn}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* 7. Firm Name Weight */}
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-200 mb-1.5 flex items-center gap-1.5">
+                            <Type className="w-3.5 h-3.5 text-[#c5a869]" />
+                            {isAr ? 'سماكة خط اسم المكتب (Font Weight)' : 'Firm Name Font Weight'}
+                          </label>
+                          <div className="grid grid-cols-4 gap-1.5">
+                            {[
+                              { id: 'normal', labelAr: 'عادي', labelEn: 'Regular' },
+                              { id: 'semibold', labelAr: 'شبه عريض', labelEn: 'Semibold' },
+                              { id: 'bold', labelAr: 'عريض', labelEn: 'Bold' },
+                              { id: 'extrabold', labelAr: 'عريض جداً', labelEn: 'Extra Bold' },
+                            ].map((wt) => (
+                              <button
+                                key={wt.id}
+                                type="button"
+                                onClick={() => setSettings({ ...settings, firmNameWeightNavbar: wt.id as any })}
+                                className={`py-2 px-1 rounded-xl text-center text-xs font-semibold transition cursor-pointer border ${
+                                  (settings.firmNameWeightNavbar || 'bold') === wt.id
+                                    ? 'bg-[#c5a869] text-black border-[#e5cb8e] shadow-md font-bold'
+                                    : 'bg-slate-950 text-slate-300 border-slate-800 hover:border-slate-600'
+                                }`}
+                              >
+                                {isAr ? wt.labelAr : wt.labelEn}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* 7b. Firm Name Lines Limit in Navbar */}
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-200 mb-1.5 flex items-center gap-1.5">
+                            <Layers className="w-3.5 h-3.5 text-[#c5a869]" />
+                            {isAr ? 'عدد أسطر اسم المكتب في الترويسة' : 'Firm Name Lines in Header'}
+                          </label>
+                          <div className="grid grid-cols-3 gap-1.5">
+                            {[
+                              { id: '1', labelAr: 'سطر واحد فقط', labelEn: '1 Line' },
+                              { id: '2', labelAr: 'سطران (2)', labelEn: '2 Lines' },
+                              { id: 'auto', labelAr: 'تلقائي حسب الطول', labelEn: 'Auto' },
+                            ].map((ln) => (
+                              <button
+                                key={ln.id}
+                                type="button"
+                                onClick={() => setSettings({ ...settings, firmNameLinesNavbar: ln.id as any })}
+                                className={`py-2 px-1 rounded-xl text-center text-xs font-semibold transition cursor-pointer border ${
+                                  (settings.firmNameLinesNavbar || 'auto') === ln.id
+                                    ? 'bg-[#c5a869] text-black border-[#e5cb8e] shadow-md font-bold'
+                                    : 'bg-slate-950 text-slate-300 border-slate-800 hover:border-slate-600'
+                                }`}
+                              >
+                                {isAr ? ln.labelAr : ln.labelEn}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* 8. Hero Headline Scale & Alignment & Line Limit */}
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-200 mb-1.5 flex items-center gap-1.5">
+                            <Sliders className="w-3.5 h-3.5 text-[#c5a869]" />
+                            {isAr ? 'مقياس عنوان الواجهة الرئيسية ومحاذاته وأسطره' : 'Hero Headline Size, Alignment & Lines'}
+                          </label>
+                          <div className="grid grid-cols-4 gap-1.5 mb-2">
+                            {[
+                              { id: 'sm', labelAr: 'متوسط', labelEn: 'SM' },
+                              { id: 'md', labelAr: 'كبير', labelEn: 'MD' },
+                              { id: 'lg', labelAr: 'كبير جداً', labelEn: 'LG' },
+                              { id: 'xl', labelAr: 'ضخم', labelEn: 'XL' },
+                            ].map((sz) => (
+                              <button
+                                key={sz.id}
+                                type="button"
+                                onClick={() => setSettings({ ...settings, firmNameSizeHero: sz.id as any })}
+                                className={`py-2 px-1 rounded-xl text-center text-xs font-semibold transition cursor-pointer border ${
+                                  (settings.firmNameSizeHero || 'lg') === sz.id
+                                    ? 'bg-[#c5a869] text-black border-[#e5cb8e] shadow-md font-bold'
+                                    : 'bg-slate-950 text-slate-300 border-slate-800 hover:border-slate-600'
+                                }`}
+                              >
+                                {isAr ? sz.labelAr : sz.labelEn}
+                              </button>
+                            ))}
+                          </div>
+                          <div className="grid grid-cols-2 gap-1.5 mb-2">
+                            {[
+                              { id: 'center', labelAr: 'توسيط في المنتصف', labelEn: 'Center Aligned' },
+                              { id: 'start', labelAr: 'محاذاة مع اتجاه النص', labelEn: 'Start Aligned' },
+                            ].map((alg) => (
+                              <button
+                                key={alg.id}
+                                type="button"
+                                onClick={() => setSettings({ ...settings, heroAlignment: alg.id as any })}
+                                className={`py-1.5 px-2 rounded-xl text-center text-[11px] font-semibold transition cursor-pointer border ${
+                                  (settings.heroAlignment || 'center') === alg.id
+                                    ? 'bg-[#c5a869] text-black border-[#e5cb8e] shadow-md font-bold'
+                                    : 'bg-slate-950 text-slate-300 border-slate-800 hover:border-slate-600'
+                                }`}
+                              >
+                                {isAr ? alg.labelAr : alg.labelEn}
+                              </button>
+                            ))}
+                          </div>
+                          {/* Hero Headline Line Count */}
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[11px] text-slate-400 font-medium">{isAr ? 'أسطر العنوان الرئيسي:' : 'Headline Lines:'}</span>
+                            <div className="grid grid-cols-4 gap-1 flex-1">
+                              {[
+                                { id: '1', label: '1' },
+                                { id: '2', label: '2' },
+                                { id: '3', label: '3' },
+                                { id: 'auto', label: isAr ? 'تلقائي' : 'Auto' },
+                              ].map((ln) => (
+                                <button
+                                  key={ln.id}
+                                  type="button"
+                                  onClick={() => setSettings({ ...settings, heroHeadlineLines: ln.id as any })}
+                                  className={`py-1 px-1 rounded-lg text-center text-[11px] font-semibold transition cursor-pointer border ${
+                                    (settings.heroHeadlineLines || 'auto') === ln.id
+                                      ? 'bg-[#c5a869] text-black border-[#e5cb8e] shadow-sm font-bold'
+                                      : 'bg-slate-950 text-slate-400 border-slate-800 hover:border-slate-600'
+                                  }`}
+                                >
+                                  {ln.label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 9. Subtitle under Firm Name in Navbar */}
+                      <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs font-semibold text-slate-200 cursor-pointer flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={settings.showNavbarSubtitle !== false}
+                              onChange={(e) => setSettings({ ...settings, showNavbarSubtitle: e.target.checked })}
+                              className="rounded bg-slate-900 border-slate-700 text-[#c5a869] focus:ring-0 w-4 h-4 cursor-pointer"
+                            />
+                            <span>{isAr ? 'إظهار السطر التعريفي الصغير تحت اسم المكتب في الترويسة' : 'Show Small Subtitle Under Firm Name in Navbar'}</span>
+                          </label>
+                        </div>
+                        {settings.showNavbarSubtitle !== false && (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                            <div>
+                              <label className="block text-[11px] text-slate-400 mb-1">{isAr ? 'السطر التعريفي (عربي)' : 'Subtitle (Arabic)'}</label>
+                              <input
+                                type="text"
+                                value={settings.navbarSubtitleAr || ''}
+                                onChange={(e) => setSettings({ ...settings, navbarSubtitleAr: e.target.value })}
+                                placeholder="مثال: محامون ومستشارون قانونيون ومحكّمون"
+                                className="w-full px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-white text-xs focus:border-[#c5a869]"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[11px] text-slate-400 mb-1">{isAr ? 'Subtitle (English)' : 'Subtitle (English)'}</label>
+                              <input
+                                type="text"
+                                value={settings.navbarSubtitleEn || ''}
+                                onChange={(e) => setSettings({ ...settings, navbarSubtitleEn: e.target.value })}
+                                placeholder="e.g. Attorneys, Legal Counsel & Arbitrators"
+                                className="w-full px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-white text-xs focus:border-[#c5a869]"
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* About texts */}
+                  <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
+                    <h4 className="text-xs font-bold text-white uppercase tracking-wider">
+                      {isAr ? 'نصوص قسم "عن المكتب"' : 'About Section Paragraphs'}
+                    </h4>
+
+                    <div>
+                      <label className="block text-xs text-slate-300 mb-1">النبذة الرئيسية</label>
+                      <textarea
+                        rows={3}
+                        value={settings.aboutTextAr}
+                        onChange={(e) => setSettings({ ...settings, aboutTextAr: e.target.value })}
+                        className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs text-slate-300 mb-1">نص الرؤية والرسالة</label>
+                        <textarea
+                          rows={3}
+                          value={settings.aboutVisionAr || ''}
+                          onChange={(e) => setSettings({ ...settings, aboutVisionAr: e.target.value })}
+                          className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-slate-300 mb-1">نص المنهجية والاستراتيجية</label>
+                        <textarea
+                          rows={3}
+                          value={settings.aboutMethodologyAr || ''}
+                          onChange={(e) => setSettings({ ...settings, aboutMethodologyAr: e.target.value })}
+                          className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Contact Info & Password & Address Controls */}
+                  <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-5">
+                    <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                      <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                        <MapPin className="w-4 h-4 text-[#c5a869]" />
+                        <span>{isAr ? 'العنوان الجغرافي للمقر الرئيسي والتحكم بعدد الأسطر' : 'Headquarters Address & Line Formatting'}</span>
+                      </h4>
+                      <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-[#c5a869]/20 text-[#e5cb8e] font-semibold">
+                        {isAr ? 'تنسيق مرن' : 'Flexible Format'}
+                      </span>
+                    </div>
+
+                    {/* Address Line Controls */}
+                    <div className="p-4 rounded-xl bg-slate-950/90 border border-slate-800 space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {/* Number of Lines Limit */}
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-200 mb-1.5 flex items-center gap-1.5">
+                            <Layers className="w-3.5 h-3.5 text-[#c5a869]" />
+                            {isAr ? 'الحد الأقصى لعدد أسطر العنوان (Line Clamp)' : 'Address Lines Count Limit'}
+                          </label>
+                          <div className="grid grid-cols-4 gap-1.5">
+                            {[
+                              { id: '1', labelAr: 'سطر 1', labelEn: '1 Line' },
+                              { id: '2', labelAr: 'سطران (2)', labelEn: '2 Lines' },
+                              { id: '3', labelAr: '3 أسطر', labelEn: '3 Lines' },
+                              { id: 'auto', labelAr: 'تلقائي كامل', labelEn: 'Auto / All' },
+                            ].map((ln) => (
+                              <button
+                                key={ln.id}
+                                type="button"
+                                onClick={() => setSettings({ ...settings, addressLinesCount: ln.id as any })}
+                                className={`py-2 px-1 rounded-xl text-center text-xs font-semibold transition cursor-pointer border ${
+                                  (settings.addressLinesCount || 'auto') === ln.id
+                                    ? 'bg-[#c5a869] text-black border-[#e5cb8e] shadow-md font-bold'
+                                    : 'bg-slate-900 text-slate-300 border-slate-700 hover:border-slate-500'
+                                }`}
+                              >
+                                {isAr ? ln.labelAr : ln.labelEn}
+                              </button>
+                            ))}
+                          </div>
+                          <p className="text-[10px] text-slate-400 mt-1">
+                            {isAr ? 'يحدد كيف يتم اختصار أو إظهار العنوان في الفوتر وبطاقات العناوين' : 'Controls truncating or full display of address in footer and cards'}
+                          </p>
+                        </div>
+
+                        {/* Multiline Render Mode */}
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-200 mb-1.5 flex items-center gap-1.5">
+                            <Sliders className="w-3.5 h-3.5 text-[#c5a869]" />
+                            {isAr ? 'نمط تقسيم الأسطر (Display Mode)' : 'Display Line Break Mode'}
+                          </label>
+                          <div className="grid grid-cols-2 gap-1.5">
+                            {[
+                              { id: 'multiline', labelAr: 'تعدد الأسطر (حسب Enter)', labelEn: 'Preserve Newlines' },
+                              { id: 'single', labelAr: 'سطر متصل مع فواصل', labelEn: 'Single Connected Line' },
+                            ].map((md) => (
+                              <button
+                                key={md.id}
+                                type="button"
+                                onClick={() => setSettings({ ...settings, addressDisplayMode: md.id as any })}
+                                className={`py-2 px-1.5 rounded-xl text-center text-xs font-semibold transition cursor-pointer border ${
+                                  (settings.addressDisplayMode || 'multiline') === md.id
+                                    ? 'bg-[#c5a869] text-black border-[#e5cb8e] shadow-md font-bold'
+                                    : 'bg-slate-900 text-slate-300 border-slate-700 hover:border-slate-500'
+                                }`}
+                              >
+                                {isAr ? md.labelAr : md.labelEn}
+                              </button>
+                            ))}
+                          </div>
+                          <p className="text-[10px] text-slate-400 mt-1">
+                            {isAr ? 'يمكنك النزول لسطر جديد داخل صندوق النص لتنظيم العنوان على أسطر منفصلة' : 'Press Enter in the textarea to split building, floor, street, and city on separate lines'}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Address Inputs with Multiline Textarea */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-300 mb-1">
+                            {isAr ? 'العنوان التفصيلي للمقر (عربي) - يدعم أسطر متعددة' : 'Detailed Address (Arabic)'}
+                          </label>
+                          <textarea
+                            rows={3}
+                            value={settings.addressAr}
+                            onChange={(e) => setSettings({ ...settings, addressAr: e.target.value })}
+                            placeholder={'برج المملكة، الطابق 42\nطريق الملك فهد\nالرياض، المملكة العربية السعودية'}
+                            className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs focus:border-[#c5a869] focus:outline-none"
+                          />
+                          <span className="text-[10px] text-slate-400">
+                            {isAr ? 'اضغط Enter لإنشاء سطر جديد' : 'Press Enter to create new line'}
+                          </span>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-300 mb-1">
+                            {isAr ? 'Detailed Address (English) - Supports Multiline' : 'Detailed Address (English)'}
+                          </label>
+                          <textarea
+                            rows={3}
+                            value={settings.addressEn}
+                            onChange={(e) => setSettings({ ...settings, addressEn: e.target.value })}
+                            placeholder={'Kingdom Tower, 42nd Floor\nKing Fahd Road\nRiyadh, Saudi Arabia'}
+                            className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs focus:border-[#c5a869] focus:outline-none"
+                          />
+                          <span className="text-[10px] text-slate-400">
+                            {isAr ? 'Supports multi-line formatting' : 'Supports multi-line formatting'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Quick Presets for Address format */}
+                      <div className="pt-2 border-t border-slate-800 flex flex-wrap items-center gap-2">
+                        <span className="text-[11px] text-slate-400 font-medium">
+                          {isAr ? 'نماذج سريعة لترتيب أسطر العنوان:' : 'Quick Address Formatting Presets:'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setSettings({
+                            ...settings,
+                            addressAr: 'برج المملكة، الطابق 42\nطريق الملك فهد، حي العليا\nالرياض 12214، المملكة العربية السعودية',
+                            addressEn: 'Kingdom Tower, 42nd Floor\nKing Fahd Road, Al-Olaya\nRiyadh 12214, Saudi Arabia',
+                            addressLinesCount: 'auto',
+                            addressDisplayMode: 'multiline'
+                          })}
+                          className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] text-[#e5cb8e] border border-slate-700 transition cursor-pointer"
+                        >
+                          {isAr ? '3 أسطر منظمة (البرج / الشارع / المدينة)' : '3 Clean Lines Format'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSettings({
+                            ...settings,
+                            addressAr: 'مركز دبي المالي العالمي (DIFC)، البوابة 4، الطابق 18، دبي، الإمارات العربية المتحدة',
+                            addressEn: 'Dubai International Financial Centre (DIFC), Gate 4, Level 18, Dubai, UAE',
+                            addressLinesCount: 'auto',
+                            addressDisplayMode: 'single'
+                          })}
+                          className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] text-slate-300 border border-slate-700 transition cursor-pointer"
+                        >
+                          {isAr ? 'سطر أفقي كلاسيكي (DIFC دبي)' : 'Single Line Format (Dubai)'}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                      <div>
+                        <label className="block text-xs text-slate-300 mb-1">الهاتف الرئيسي</label>
+                        <input
+                          type="text"
+                          value={settings.phone}
+                          onChange={(e) => setSettings({ ...settings, phone: e.target.value })}
+                          className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs font-mono"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-slate-300 mb-1">خط الطوارئ 24/7</label>
+                        <input
+                          type="text"
+                          value={settings.emergencyPhone}
+                          onChange={(e) => setSettings({ ...settings, emergencyPhone: e.target.value })}
+                          className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs font-mono"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs text-slate-300 mb-1">البريد الإلكتروني العام</label>
+                        <input
+                          type="email"
+                          value={settings.email}
+                          onChange={(e) => setSettings({ ...settings, email: e.target.value })}
+                          className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-slate-300 mb-1">كلمة مرور لوحة التحكم الجديدة</label>
+                        <input
+                          type="text"
+                          value={settings.adminPassword || 'admin'}
+                          onChange={(e) => setSettings({ ...settings, adminPassword: e.target.value })}
+                          className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="px-8 py-3.5 rounded-xl bg-gradient-to-r from-[#d4af37] via-[#c5a869] to-[#aa8022] text-slate-950 font-bold text-sm hover:brightness-110 transition flex items-center gap-2 cursor-pointer shadow-xl"
+                  >
+                    <Save className="w-4 h-4 text-slate-950" />
+                    <span>{isAr ? 'حفظ وتطبيق كافة التغييرات على الموقع فوراً' : 'Apply & Save All Changes'}</span>
+                  </button>
+                </form>
+              )}
+
+              {/* TAB 9: BACKUP & DATA RESTORE */}
+              {activeTab === 'backup' && (
+                <div className="space-y-6 max-w-2xl">
+                  <div>
+                    <h3 className="text-xl font-bold font-serif-title text-white">
+                      {isAr ? 'النسخ الاحتياطي واستيراد البيانات' : 'Backup & Data Management'}
+                    </h3>
+                    <p className="text-xs text-slate-400">
+                      {isAr ? 'تصدير نسخة كاملة من قاعدة بيانات الموقع أو استعادتها بضغطة زر' : 'Export and import complete JSON database snapshots'}
+                    </p>
+                  </div>
+
+                  <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
+                    <h4 className="font-bold text-white text-sm">{isAr ? 'تصدير نسخة احتياطية (Export JSON)' : 'Export JSON Backup'}</h4>
+                    <p className="text-xs text-slate-300">
+                      {isAr ? 'حفظ ملف يحتوي على كافة بيانات الشركاء، الاختصاصات، مقالات المدونة، ورسائل العملاء.' : 'Save a complete snapshot of partners, practices, messages and settings.'}
+                    </p>
+                    <button
+                      onClick={handleExportBackup}
+                      className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-[#e5cb8e] border border-[#c5a869]/30 text-xs font-semibold flex items-center gap-2 transition cursor-pointer"
+                    >
+                      <Download className="w-4 h-4 text-[#c5a869]" />
+                      <span>{isAr ? 'تنزيل ملف النسخة الاحتياطية' : 'Download Backup File'}</span>
+                    </button>
+                  </div>
+
+                  <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
+                    <h4 className="font-bold text-white text-sm">{isAr ? 'استيراد نسخة سابقة (Import JSON)' : 'Import JSON Backup'}</h4>
+                    <p className="text-xs text-slate-300">
+                      {isAr ? 'رفع ملف نسخة احتياطية سابقة لاستعادة كامل البيانات.' : 'Restore data from a previously exported JSON backup.'}
+                    </p>
+                    <label className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold cursor-pointer transition">
+                      <Upload className="w-4 h-4 text-[#c5a869]" />
+                      <span>{isAr ? 'اختيار ملف JSON للاستيراد' : 'Select JSON File'}</span>
+                      <input type="file" accept=".json" onChange={handleImportBackup} className="hidden" />
+                    </label>
+                  </div>
+
+                  <div className="p-6 rounded-2xl bg-rose-950/20 border border-rose-500/30 space-y-4">
+                    <h4 className="font-bold text-rose-300 text-sm">{isAr ? 'إعادة ضبط المصنع (Reset Defaults)' : 'Reset to Defaults'}</h4>
+                    <p className="text-xs text-slate-400">
+                      {isAr ? 'إعادة كافة البيانات إلى البيانات الأولية المعتمدة للمكتب.' : 'Reset all partners, articles, and settings to original defaults.'}
+                    </p>
+                    <button
+                      onClick={handleResetDefaults}
+                      className="px-5 py-2.5 rounded-xl bg-rose-900/40 hover:bg-rose-900 text-rose-200 border border-rose-500/40 text-xs font-semibold flex items-center gap-2 transition cursor-pointer"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                      <span>{isAr ? 'استعادة البيانات الافتراضية' : 'Reset to Defaults'}</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+            </div>
+          </div>
+        )}
+
+        {/* Delete Confirmation Modal */}
+        {deleteConfirmTarget && (
+          <div className="fixed inset-0 z-70 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade-in">
+            <div className="w-full max-w-md p-6 rounded-3xl bg-slate-900 border border-rose-500/50 shadow-2xl text-center space-y-4">
+              <div className="w-14 h-14 rounded-2xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center mx-auto text-rose-400">
+                <Trash2 className="w-7 h-7" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white mb-1">
+                  {isAr ? 'تأكيد الحذف النهائي' : 'Confirm Permanent Deletion'}
+                </h3>
+                <p className="text-xs text-slate-300">
+                  {isAr ? `هل أنت متأكد من رغبتك في حذف "${deleteConfirmTarget.title}"؟ لا يمكن التراجع عن هذا الإجراء.` : `Are you sure you want to delete "${deleteConfirmTarget.title}"? This action cannot be undone.`}
+                </p>
+              </div>
+              <div className="flex items-center justify-center gap-3 pt-2">
+                <button
+                  onClick={() => setDeleteConfirmTarget(null)}
+                  className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition cursor-pointer"
+                >
+                  {isAr ? 'إلغاء' : 'Cancel'}
+                </button>
+                <button
+                  onClick={() => {
+                    const { type, id } = deleteConfirmTarget;
+                    if (type === 'partner') {
+                      const updated = storageService.deletePartner(id);
+                      setPartners(updated);
+                      showToast(isAr ? 'تم حذف الشريك بنجاح' : 'Partner deleted');
+                    } else if (type === 'practice') {
+                      const updated = storageService.deletePracticeArea(id);
+                      setPracticeAreas(updated);
+                      showToast(isAr ? 'تم حذف الاختصاص بنجاح' : 'Practice area deleted');
+                    } else if (type === 'caseStudy') {
+                      const updated = storageService.deleteCaseStudy(id);
+                      setCaseStudies(updated);
+                      showToast(isAr ? 'تم حذف القضية بنجاح' : 'Case study deleted');
+                    } else if (type === 'testimonial') {
+                      const updated = storageService.deleteTestimonial(id);
+                      setTestimonials(updated);
+                      showToast(isAr ? 'تم حذف الشهادة بنجاح' : 'Testimonial deleted');
+                    } else if (type === 'blog') {
+                      const updated = storageService.deleteBlogPost(id);
+                      setBlogPosts(updated);
+                      showToast(isAr ? 'تم حذف المقال بنجاح' : 'Article deleted');
+                    } else if (type === 'office') {
+                      const updated = storageService.deleteOffice(id);
+                      setOffices(updated);
+                      showToast(isAr ? 'تم حذف المقر بنجاح' : 'Office deleted');
+                    } else if (type === 'message') {
+                      const updated = storageService.deleteMessage(id);
+                      setMessages(updated);
+                      showToast(isAr ? 'تم حذف الرسالة بنجاح' : 'Message deleted');
+                    }
+                    setDeleteConfirmTarget(null);
+                  }}
+                  className="px-6 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition cursor-pointer shadow-lg"
+                >
+                  {isAr ? 'نعم، حذف نهائي' : 'Yes, Delete'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+      </div>
+    </div>
+  );
+};

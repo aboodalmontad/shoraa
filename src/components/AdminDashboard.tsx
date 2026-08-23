@@ -6,7 +6,7 @@ import {
   Trophy, Building, Search, Filter, Key, ExternalLink, Sparkles, Image as ImageIcon,
   UserCheck, Briefcase, UserPlus, GraduationCap, Building2, Gavel, Landmark, Globe, Layers, Tag,
   Layout, Sliders, Type, AlignCenter, AlignRight, Maximize2, Move, MapPin,
-  Languages, Wand2, ArrowRightLeft, Loader2
+  Languages, Wand2, ArrowRightLeft, Loader2, Target, Compass, Award, History, FileText
 } from 'lucide-react';
 import { storageService } from '../services/storageService';
 import { Partner, PracticeArea, Testimonial, BlogPost, CaseStudy, ContactMessage, SiteSettings, OfficeLocation, Language } from '../types';
@@ -75,6 +75,15 @@ const PRESET_PRACTICE_IMAGES = [
   'https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?auto=format&fit=crop&q=80&w=1200',
 ];
 
+const PRESET_ABOUT_IMAGES = [
+  'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=1000',
+  'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=1000',
+  'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&q=80&w=1000',
+  'https://images.unsplash.com/photo-1450133064473-71024230f91b?auto=format&fit=crop&q=80&w=1000',
+  'https://images.unsplash.com/photo-1577495508048-b635879837f1?auto=format&fit=crop&q=80&w=1000',
+  'https://images.unsplash.com/photo-1505664194779-8beaceb93744?auto=format&fit=crop&q=80&w=1000'
+];
+
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose, lang }) => {
   const isAr = lang === 'ar';
 
@@ -85,8 +94,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
 
   // Active Tab
   const [activeTab, setActiveTab] = useState<
-    'messages' | 'partners' | 'practices' | 'caseStudies' | 'testimonials' | 'blog' | 'offices' | 'settings' | 'backup'
+    'messages' | 'about' | 'partners' | 'practices' | 'caseStudies' | 'testimonials' | 'blog' | 'offices' | 'settings' | 'backup'
   >('messages');
+
+  // About Section Editing State
+  const [aboutLangTab, setAboutLangTab] = useState<'ar' | 'en' | 'tr'>('ar');
+  const [aboutPreviewTab, setAboutPreviewTab] = useState<'vision' | 'methodology' | 'standards'>('vision');
 
   // Loaded Data
   const [partners, setPartners] = useState<Partner[]>([]);
@@ -292,6 +305,26 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
     } finally {
       setIsTranslating(false);
     }
+  };
+
+  const handleTranslateCurrentAbout = async () => {
+    setIsTranslating(true);
+    try {
+      const translated = await autoTranslateSettings(settings);
+      setSettings(translated);
+      storageService.saveSettings(translated);
+      showToast(isAr ? '✨ تم ترجمة نصوص قسم «عن المكتب والمسيرة» للإنجليزية والتركية بنجاح' : 'About & Journey texts translated to EN & TR');
+    } catch (err) {
+      showToast(isAr ? 'تعذر إتمام الترجمة' : 'Translation failed', 'error');
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
+  const handleSaveAboutSettings = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    storageService.saveSettings(settings);
+    showToast(isAr ? '💾 تم حفظ وتحديث نصوص «عن المكتب والمسيرة» فوراً على الموقع!' : 'About & Journey content saved successfully!');
   };
 
   if (!isOpen) return null;
@@ -724,6 +757,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
                 )}
               </button>
 
+              {/* About the Firm & Journey */}
+              <button
+                onClick={() => { setActiveTab('about'); setEditingPartner(null); setEditingPractice(null); }}
+                className={`w-full px-4 py-3 rounded-xl text-xs sm:text-sm font-medium transition flex items-center justify-between cursor-pointer whitespace-nowrap ${
+                  activeTab === 'about' ? 'bg-[#c5a869] text-slate-950 font-bold shadow-md' : 'text-slate-300 hover:bg-slate-900'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <BookOpen className="w-4 h-4" />
+                  <span>{isAr ? 'عن المكتب والمسيرة' : 'About & Journey'}</span>
+                </div>
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-[#e5cb8e] font-semibold border border-slate-700">
+                  {isAr ? 'القصة والرؤية' : 'Story'}
+                </span>
+              </button>
+
               {/* Partners */}
               <button
                 onClick={() => { setActiveTab('partners'); setEditingPartner(null); }}
@@ -984,6 +1033,731 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
                       ))}
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* TAB: ABOUT THE FIRM & JOURNEY (عن المكتب والمسيرة) */}
+              {activeTab === 'about' && (
+                <div className="space-y-6">
+                  {/* Top Bar Header */}
+                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-slate-900/90 p-5 rounded-2xl border border-slate-800 shadow-md">
+                    <div className="flex items-start sm:items-center gap-3.5">
+                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#c5a869] to-[#87641d] flex items-center justify-center text-slate-950 font-bold flex-shrink-0 shadow-lg">
+                        <BookOpen className="w-6 h-6 text-slate-950" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-xl font-bold font-serif-title text-white">
+                            {isAr ? 'إدارة نصوص «عن المكتب والمسيرة»' : 'About the Firm & Journey Content'}
+                          </h3>
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#c5a869]/20 text-[#e5cb8e] font-bold border border-[#c5a869]/40">
+                            {isAr ? 'محتوى استراتيجي' : 'Core Section'}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-400 mt-1">
+                          {isAr 
+                            ? 'تحكم كامل وفوري في قصة التأسيس، العنوان الرئيسي، الرؤية، المنهجية، معايير السرية، الجوائز والصورة بجميع اللغات.' 
+                            : 'Full control over the firm history, heading, vision, methodology, confidentiality standards, rankings, and imagery.'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      {/* Language Switcher for editing */}
+                      <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800">
+                        <button
+                          type="button"
+                          onClick={() => setAboutLangTab('ar')}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                            aboutLangTab === 'ar' ? 'bg-[#c5a869] text-slate-950 shadow-sm' : 'text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          <span>🇸🇦</span>
+                          <span>العربية</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setAboutLangTab('en')}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                            aboutLangTab === 'en' ? 'bg-[#c5a869] text-slate-950 shadow-sm' : 'text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          <span>🇬🇧</span>
+                          <span>English</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setAboutLangTab('tr')}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                            aboutLangTab === 'tr' ? 'bg-[#c5a869] text-slate-950 shadow-sm' : 'text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          <span>🇹🇷</span>
+                          <span>Türkçe</span>
+                        </button>
+                      </div>
+
+                      {/* Auto-Translate Button */}
+                      <button
+                        type="button"
+                        onClick={handleTranslateCurrentAbout}
+                        disabled={isTranslating}
+                        className="px-3.5 py-2 rounded-xl bg-purple-950/60 border border-purple-500/40 text-purple-200 hover:bg-purple-900/60 font-bold text-xs flex items-center gap-2 transition disabled:opacity-50 cursor-pointer shadow-sm"
+                        title={isAr ? 'ترجمة النصوص العربية تلقائياً للإنجليزية والتركية' : 'Auto-translate Arabic texts to EN & TR'}
+                      >
+                        {isTranslating ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin text-purple-300" />
+                            <span>{isAr ? 'جاري الترجمة الذكية...' : 'Translating...'}</span>
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+                            <span>{isAr ? 'ترجمة ذكية فورية' : 'AI Translate'}</span>
+                          </>
+                        )}
+                      </button>
+
+                      {/* Save Button */}
+                      <button
+                        type="button"
+                        onClick={() => handleSaveAboutSettings()}
+                        className="px-5 py-2 rounded-xl bg-gradient-to-r from-[#c5a869] via-[#d4af37] to-[#aa8022] text-slate-950 font-bold text-xs flex items-center gap-2 hover:brightness-110 transition cursor-pointer shadow-lg"
+                      >
+                        <Save className="w-4 h-4 text-slate-950" />
+                        <span>{isAr ? 'حفظ وتطبيق التغييرات' : 'Save Changes'}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Quick Narrative Presets */}
+                  <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 text-xs font-semibold text-slate-300">
+                      <Wand2 className="w-4 h-4 text-[#c5a869]" />
+                      <span>{isAr ? 'نماذج صياغة وسرد تاريخي جاهزة للمسيرة:' : 'Quick Pre-written Narrative Templates:'}</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSettings({
+                            ...settings,
+                            aboutBadgeAr: 'عن المكتب والمسيرة',
+                            aboutBadgeEn: 'About The Firm & Journey',
+                            aboutBadgeTr: 'Büromuz ve Tarihçemiz',
+                            aboutHeadingAr: 'أكثر من ربع قرن في حماية الاستثمارات وصناعة القرارات القانونية الفارقة',
+                            aboutHeadingEn: 'Over a Quarter Century of Protecting Capital & Shaping High-Stakes Law',
+                            aboutHeadingTr: 'Çeyrek asrı aşkın süredir Yatırımları Koruyor ve Stratejik Hukuki Zaferlere İmza Atıyoruz',
+                            aboutTextAr: 'تأسس مكتبنا ليكون المرجع القانوني الأول للشركات الكبرى والمؤسسات المالية والمستثمرين الإقليميين والدوليين. نجمع بين العمق الفقهي والنظامي والخبرة الدولية العابرة للحدود، لنقدم استشارات متقدمة وتمثيلاً قضائياً لا يقبل المساومة.',
+                            aboutVisionAr: 'أن نكون الحصن القانوني الأكثر موثوقية وتميزاً في الشرق الأوسط، والمساهم الأول في صياغة الحلول القانونية المبتكرة التي تدعم النمو الاقتصادي الآمن للكيانات الاستثمارية.',
+                            aboutMethodologyAr: 'نعتمد منهجية التحليل الرباعي للمخاطر وتدقيق السوابق القضائية المتماثلة، حيث يشارك في دراسة كل ملف فريق يضم شريكاً رئيساً ومستشاراً تنفيذياً لضمان فحص الثغرات بدقة متناهية.',
+                            aboutConfidentialityAr: 'نطبق بروتوكولات حماية وسرية بيانات مطابقة لأعلى المعايير الأمنية المصرفية الدولية، مع التزام صارم بعدم تعارض المصالح والشفافية الكاملة في تقدير الأتعاب.',
+                          });
+                          showToast(isAr ? 'تم استدعاء نموذج: التحكيم والنزاعات الكبرى' : 'Applied: Arbitration & High-Stakes Law template');
+                        }}
+                        className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-medium transition cursor-pointer border border-slate-700"
+                      >
+                        ⚖️ {isAr ? 'نموذج: تحكيم وقضاء رائد' : 'Preset: High Litigation'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSettings({
+                            ...settings,
+                            aboutBadgeAr: 'الريادة والمصرفية',
+                            aboutBadgeEn: 'Corporate M&A Legacy',
+                            aboutBadgeTr: 'Şirketler & Birleşmeler Mirası',
+                            aboutHeadingAr: 'مستشارون استراتيجيون لأكبر عمليات الاستحواذ والتمويل المؤسسي',
+                            aboutHeadingEn: 'Strategic Legal Counsel for Landmark Mergers, Acquisitions & Corporate Finance',
+                            aboutHeadingTr: 'Büyük Ölçekli Şirket Birleşmeleri ve Kurumsal Finansmanda Stratejik Hukuk Rehberliği',
+                            aboutTextAr: 'منذ تأسيسنا، قاد مكتبنا عشرات الصفقات العابرة للحدود وإعادة الهيكلة الشاملة لبيوت المال والشركات القابضة، واضعين حماية رأس المال وتعظيم القيمة الاستثمارية في صميم عملنا اليومي.',
+                            aboutVisionAr: 'تمكين المؤسسات الاستثمارية والشركات العائلية من التوسع الآمن وبناء هياكل حوكمة محصنة عالمياً ضد النزاعات والمخاطر التنظيمية.',
+                            aboutMethodologyAr: 'دمج التحليل المالي-القانوني المتقدم، وإجراء الفحص النافي للجهالة المتعمق قبل التوقيع، لضمان أعلى مستويات الأمان التعاقدي.',
+                            aboutConfidentialityAr: 'سرية بنكية مشددة وتطبيق اتفاقيات الحماية المعلوماتية وفق أرقى ممارسات الصفقات العالمية.',
+                          });
+                          showToast(isAr ? 'تم استدعاء نموذج: صفقات وحوكمة واستثمار' : 'Applied: Corporate M&A template');
+                        }}
+                        className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-medium transition cursor-pointer border border-slate-700"
+                      >
+                        🏢 {isAr ? 'نموذج: صفقات وحوكمة واستثمار' : 'Preset: Corporate M&A'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSettings({
+                            ...settings,
+                            aboutBadgeAr: 'الابتكار والاقتصاد الرقمي',
+                            aboutBadgeEn: 'Innovation & Tech Legal Architects',
+                            aboutBadgeTr: 'Yenilik ve Dijital Ekonomi Hukuku',
+                            aboutHeadingAr: 'بناء الحماية القانونية لرواد التقنية والملكية الفكرية واقتصاد المستقبل',
+                            aboutHeadingEn: 'Architecting Legal Shields for Frontier Tech, IP Assets & Future Economy',
+                            aboutHeadingTr: 'Teknoloji Öncüleri ve Fikri Mülkiyet İçin Geleceğin Hukuki Zırhını İnşa Ediyoruz',
+                            aboutTextAr: 'نواكب التسارع الرقمي وثورة الذكاء الاصطناعي وصناديق رأس المال الجريء بحلول قانونية رائدة تحمي الأصول غير الملموسة وتبني عقوداً ذكية متطابقة مع أحدث التشريعات العالمية.',
+                            aboutVisionAr: 'قيادة الاستشارات القانونية في قطاعات التكنولوجيا المتقدمة، والفضاء السيبراني، والتكنولوجيا المالية (FinTech) على مستوى المنطقة.',
+                            aboutMethodologyAr: 'استباق التحديات التنظيمية ومواءمة نماذج الأعمال المبتكرة مع القوانين الناشئة بمرونة فائقة.',
+                            aboutConfidentialityAr: 'تشفير كامل لكافة الأسرار التجارية وبراءات الاختراع والشيفرات البرمجية للموكلين.',
+                          });
+                          showToast(isAr ? 'تم استدعاء نموذج: تقنية وابتكار' : 'Applied: Innovation & Tech template');
+                        }}
+                        className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-medium transition cursor-pointer border border-slate-700"
+                      >
+                        🚀 {isAr ? 'نموذج: تقنية وابتكار' : 'Preset: Tech & Innovation'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Main Form Tabs Content */}
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    
+                    {/* Left 7 Cols: Inputs according to selected language */}
+                    <div className="lg:col-span-7 space-y-6">
+                      
+                      {/* Section 1: Header, Badge, CTA */}
+                      <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
+                        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                          <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                            <Tag className="w-4 h-4 text-[#c5a869]" />
+                            <span>
+                              {isAr ? '1. العنوان الرئيسي وشارة القسم والزر' : '1. Section Header, Badge & Action Button'}
+                            </span>
+                          </h4>
+                          <span className="text-[11px] font-mono text-[#c5a869] font-bold uppercase">
+                            [{aboutLangTab.toUpperCase()}]
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          {/* Badge Text */}
+                          <div>
+                            <label className="block text-xs text-slate-300 font-semibold mb-1">
+                              {isAr ? 'شارة القسم الصغيرة (Badge)' : 'Section Tag / Badge'}
+                            </label>
+                            {aboutLangTab === 'ar' ? (
+                              <input
+                                type="text"
+                                value={settings.aboutBadgeAr || ''}
+                                onChange={(e) => setSettings({ ...settings, aboutBadgeAr: e.target.value })}
+                                placeholder="عن المكتب والمسيرة"
+                                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869]"
+                              />
+                            ) : aboutLangTab === 'en' ? (
+                              <input
+                                type="text"
+                                value={settings.aboutBadgeEn || ''}
+                                onChange={(e) => setSettings({ ...settings, aboutBadgeEn: e.target.value })}
+                                placeholder="About The Firm & Journey"
+                                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869]"
+                              />
+                            ) : (
+                              <input
+                                type="text"
+                                value={settings.aboutBadgeTr || ''}
+                                onChange={(e) => setSettings({ ...settings, aboutBadgeTr: e.target.value })}
+                                placeholder="Büromuz ve Tarihçemiz"
+                                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869]"
+                              />
+                            )}
+                          </div>
+
+                          {/* CTA Button Text */}
+                          <div>
+                            <label className="block text-xs text-slate-300 font-semibold mb-1">
+                              {isAr ? 'نص زر حجز الجلسة (CTA)' : 'Action Button (CTA)'}
+                            </label>
+                            {aboutLangTab === 'ar' ? (
+                              <input
+                                type="text"
+                                value={settings.aboutCtaTextAr || ''}
+                                onChange={(e) => setSettings({ ...settings, aboutCtaTextAr: e.target.value })}
+                                placeholder="حجز جلسة عمل مع الشريك الإداري"
+                                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869]"
+                              />
+                            ) : aboutLangTab === 'en' ? (
+                              <input
+                                type="text"
+                                value={settings.aboutCtaTextEn || ''}
+                                onChange={(e) => setSettings({ ...settings, aboutCtaTextEn: e.target.value })}
+                                placeholder="Book Strategy Session with Managing Partner"
+                                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869]"
+                              />
+                            ) : (
+                              <input
+                                type="text"
+                                value={settings.aboutCtaTextTr || ''}
+                                onChange={(e) => setSettings({ ...settings, aboutCtaTextTr: e.target.value })}
+                                placeholder="Yönetici Ortak ile Strateji Görüşmesi Planlayın"
+                                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869]"
+                              />
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Main Big Heading */}
+                        <div>
+                          <label className="block text-xs text-slate-300 font-semibold mb-1">
+                            {isAr ? 'العنوان الرئيسي العريض (Heading)' : 'Main Big Heading'}
+                          </label>
+                          {aboutLangTab === 'ar' ? (
+                            <input
+                              type="text"
+                              value={settings.aboutHeadingAr || ''}
+                              onChange={(e) => setSettings({ ...settings, aboutHeadingAr: e.target.value })}
+                              placeholder="أكثر من ربع قرن في حماية الاستثمارات وصناعة القرارات القانونية الفارقة"
+                              className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869]"
+                            />
+                          ) : aboutLangTab === 'en' ? (
+                            <input
+                              type="text"
+                              value={settings.aboutHeadingEn || ''}
+                              onChange={(e) => setSettings({ ...settings, aboutHeadingEn: e.target.value })}
+                              placeholder="Over a Quarter Century of Protecting Capital & Shaping High-Stakes Law"
+                              className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869]"
+                            />
+                          ) : (
+                            <input
+                              type="text"
+                              value={settings.aboutHeadingTr || ''}
+                              onChange={(e) => setSettings({ ...settings, aboutHeadingTr: e.target.value })}
+                              placeholder="Çeyrek asrı aşkın süredir Yatırımları Koruyor ve Stratejik Hukuki Zaferlere İmza Atıyoruz"
+                              className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869]"
+                            />
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Section 2: Main Narrative / Story */}
+                      <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
+                        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                          <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                            <History className="w-4 h-4 text-[#c5a869]" />
+                            <span>
+                              {isAr ? '2. قصة التأسيس والمسيرة التاريخية (الفقرة الرئيسية)' : '2. Founding History & Narrative Story'}
+                            </span>
+                          </h4>
+                          <span className="text-[11px] font-mono text-slate-400">
+                            {((aboutLangTab === 'ar' ? settings.aboutTextAr : aboutLangTab === 'en' ? settings.aboutTextEn : settings.aboutTextTr) || '').length} {isAr ? 'حرف' : 'chars'}
+                          </span>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs text-slate-300 font-semibold mb-1">
+                            {isAr ? 'نص قصة المسيرة والتأسيس (يدعم فواصل الأسطر والفقرات):' : 'Journey narrative text (supports paragraphs):'}
+                          </label>
+                          {aboutLangTab === 'ar' ? (
+                            <textarea
+                              rows={5}
+                              value={settings.aboutTextAr || ''}
+                              onChange={(e) => setSettings({ ...settings, aboutTextAr: e.target.value })}
+                              placeholder="تأسس مكتبنا ليكون المرجع القانوني الأول..."
+                              className="w-full p-3.5 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869] leading-relaxed"
+                            />
+                          ) : aboutLangTab === 'en' ? (
+                            <textarea
+                              rows={5}
+                              value={settings.aboutTextEn || ''}
+                              onChange={(e) => setSettings({ ...settings, aboutTextEn: e.target.value })}
+                              placeholder="Founded to stand as the premier legal authority..."
+                              className="w-full p-3.5 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869] leading-relaxed"
+                            />
+                          ) : (
+                            <textarea
+                              rows={5}
+                              value={settings.aboutTextTr || ''}
+                              onChange={(e) => setSettings({ ...settings, aboutTextTr: e.target.value })}
+                              placeholder="Büromuz, çok uluslu şirketler için..."
+                              className="w-full p-3.5 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869] leading-relaxed"
+                            />
+                          )}
+                          <p className="text-[11px] text-slate-500 mt-1">
+                            {isAr ? '💡 يمكنك كتابة فقرة أو فقرتين لشرح خلفية المكتب وإنجازاته التاريخية.' : 'Tip: You can write multiple paragraphs highlighting firm history.'}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Section 3: Vision, Methodology, Standards & Bullets */}
+                      <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-5">
+                        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                          <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                            <Layers className="w-4 h-4 text-[#c5a869]" />
+                            <span>
+                              {isAr ? '3. التبويبات التفاعلية الثلاثة (الرؤية / المنهجية / السرية)' : '3. Interactive Tabs (Vision, Methodology, Standards)'}
+                            </span>
+                          </h4>
+                        </div>
+
+                        {/* Tab A: Vision & Mission */}
+                        <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800/80 space-y-3">
+                          <div className="flex items-center gap-2 text-xs font-bold text-[#c5a869]">
+                            <Target className="w-4 h-4" />
+                            <span>{isAr ? 'أ) تبويب: الرؤية والرسالة المستدامة' : 'A) Tab: Vision & Mission'}</span>
+                          </div>
+                          <div>
+                            <label className="block text-[11px] text-slate-400 mb-1">{isAr ? 'النص التفصيلي للرؤية:' : 'Vision paragraph:'}</label>
+                            {aboutLangTab === 'ar' ? (
+                              <textarea
+                                rows={2}
+                                value={settings.aboutVisionAr || ''}
+                                onChange={(e) => setSettings({ ...settings, aboutVisionAr: e.target.value })}
+                                className="w-full p-2.5 rounded-lg bg-slate-900 border border-slate-700 text-white text-xs focus:border-[#c5a869]"
+                              />
+                            ) : aboutLangTab === 'en' ? (
+                              <textarea
+                                rows={2}
+                                value={settings.aboutVisionEn || ''}
+                                onChange={(e) => setSettings({ ...settings, aboutVisionEn: e.target.value })}
+                                className="w-full p-2.5 rounded-lg bg-slate-900 border border-slate-700 text-white text-xs focus:border-[#c5a869]"
+                              />
+                            ) : (
+                              <textarea
+                                rows={2}
+                                value={settings.aboutVisionTr || ''}
+                                onChange={(e) => setSettings({ ...settings, aboutVisionTr: e.target.value })}
+                                className="w-full p-2.5 rounded-lg bg-slate-900 border border-slate-700 text-white text-xs focus:border-[#c5a869]"
+                              />
+                            )}
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                            <div>
+                              <label className="block text-[10px] text-slate-400 mb-0.5">{isAr ? 'النقطة المدعمة 1:' : 'Bullet Point 1:'}</label>
+                              <input
+                                type="text"
+                                value={(aboutLangTab === 'ar' ? settings.aboutVisionPoint1Ar : aboutLangTab === 'en' ? settings.aboutVisionPoint1En : settings.aboutVisionPoint1Tr) || ''}
+                                onChange={(e) => {
+                                  if (aboutLangTab === 'ar') setSettings({ ...settings, aboutVisionPoint1Ar: e.target.value });
+                                  else if (aboutLangTab === 'en') setSettings({ ...settings, aboutVisionPoint1En: e.target.value });
+                                  else setSettings({ ...settings, aboutVisionPoint1Tr: e.target.value });
+                                }}
+                                placeholder={isAr ? 'حماية استباقية للأصول والمصالح' : 'Proactive asset shielding'}
+                                className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-white text-xs focus:border-[#c5a869]"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] text-slate-400 mb-0.5">{isAr ? 'النقطة المدعمة 2:' : 'Bullet Point 2:'}</label>
+                              <input
+                                type="text"
+                                value={(aboutLangTab === 'ar' ? settings.aboutVisionPoint2Ar : aboutLangTab === 'en' ? settings.aboutVisionPoint2En : settings.aboutVisionPoint2Tr) || ''}
+                                onChange={(e) => {
+                                  if (aboutLangTab === 'ar') setSettings({ ...settings, aboutVisionPoint2Ar: e.target.value });
+                                  else if (aboutLangTab === 'en') setSettings({ ...settings, aboutVisionPoint2En: e.target.value });
+                                  else setSettings({ ...settings, aboutVisionPoint2Tr: e.target.value });
+                                }}
+                                placeholder={isAr ? 'تمثيل قضائي وتحكيمي لا مثيل له' : 'Unmatched arbitral representation'}
+                                className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-white text-xs focus:border-[#c5a869]"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Tab B: Methodology & Analysis */}
+                        <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800/80 space-y-3">
+                          <div className="flex items-center gap-2 text-xs font-bold text-[#c5a869]">
+                            <Compass className="w-4 h-4" />
+                            <span>{isAr ? 'ب) تبويب: منهجية العمل والتحليل' : 'B) Tab: Methodology & Analysis'}</span>
+                          </div>
+                          <div>
+                            <label className="block text-[11px] text-slate-400 mb-1">{isAr ? 'النص التفصيلي للمنهجية:' : 'Methodology paragraph:'}</label>
+                            {aboutLangTab === 'ar' ? (
+                              <textarea
+                                rows={2}
+                                value={settings.aboutMethodologyAr || ''}
+                                onChange={(e) => setSettings({ ...settings, aboutMethodologyAr: e.target.value })}
+                                className="w-full p-2.5 rounded-lg bg-slate-900 border border-slate-700 text-white text-xs focus:border-[#c5a869]"
+                              />
+                            ) : aboutLangTab === 'en' ? (
+                              <textarea
+                                rows={2}
+                                value={settings.aboutMethodologyEn || ''}
+                                onChange={(e) => setSettings({ ...settings, aboutMethodologyEn: e.target.value })}
+                                className="w-full p-2.5 rounded-lg bg-slate-900 border border-slate-700 text-white text-xs focus:border-[#c5a869]"
+                              />
+                            ) : (
+                              <textarea
+                                rows={2}
+                                value={settings.aboutMethodologyTr || ''}
+                                onChange={(e) => setSettings({ ...settings, aboutMethodologyTr: e.target.value })}
+                                className="w-full p-2.5 rounded-lg bg-slate-900 border border-slate-700 text-white text-xs focus:border-[#c5a869]"
+                              />
+                            )}
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                            <div>
+                              <label className="block text-[10px] text-slate-400 mb-0.5">{isAr ? 'النقطة المدعمة 1:' : 'Bullet Point 1:'}</label>
+                              <input
+                                type="text"
+                                value={(aboutLangTab === 'ar' ? settings.aboutMethodologyPoint1Ar : aboutLangTab === 'en' ? settings.aboutMethodologyPoint1En : settings.aboutMethodologyPoint1Tr) || ''}
+                                onChange={(e) => {
+                                  if (aboutLangTab === 'ar') setSettings({ ...settings, aboutMethodologyPoint1Ar: e.target.value });
+                                  else if (aboutLangTab === 'en') setSettings({ ...settings, aboutMethodologyPoint1En: e.target.value });
+                                  else setSettings({ ...settings, aboutMethodologyPoint1Tr: e.target.value });
+                                }}
+                                placeholder={isAr ? 'تدقيق قانوني نافي للجهالة متكامل' : 'Comprehensive due diligence'}
+                                className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-white text-xs focus:border-[#c5a869]"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] text-slate-400 mb-0.5">{isAr ? 'النقطة المدعمة 2:' : 'Bullet Point 2:'}</label>
+                              <input
+                                type="text"
+                                value={(aboutLangTab === 'ar' ? settings.aboutMethodologyPoint2Ar : aboutLangTab === 'en' ? settings.aboutMethodologyPoint2En : settings.aboutMethodologyPoint2Tr) || ''}
+                                onChange={(e) => {
+                                  if (aboutLangTab === 'ar') setSettings({ ...settings, aboutMethodologyPoint2Ar: e.target.value });
+                                  else if (aboutLangTab === 'en') setSettings({ ...settings, aboutMethodologyPoint2En: e.target.value });
+                                  else setSettings({ ...settings, aboutMethodologyPoint2Tr: e.target.value });
+                                }}
+                                placeholder={isAr ? 'صياغة عقود محصنة من النزاعات' : 'Dispute-proof contractual drafting'}
+                                className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-white text-xs focus:border-[#c5a869]"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Tab C: Confidentiality & Standards */}
+                        <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800/80 space-y-3">
+                          <div className="flex items-center gap-2 text-xs font-bold text-[#c5a869]">
+                            <Shield className="w-4 h-4" />
+                            <span>{isAr ? 'ج) تبويب: السرية والأمان والامتثال الدولي' : 'C) Tab: Confidentiality & Security Standards'}</span>
+                          </div>
+                          <div>
+                            <label className="block text-[11px] text-slate-400 mb-1">{isAr ? 'النص التفصيلي للسرية:' : 'Confidentiality paragraph:'}</label>
+                            {aboutLangTab === 'ar' ? (
+                              <textarea
+                                rows={2}
+                                value={settings.aboutConfidentialityAr || ''}
+                                onChange={(e) => setSettings({ ...settings, aboutConfidentialityAr: e.target.value })}
+                                className="w-full p-2.5 rounded-lg bg-slate-900 border border-slate-700 text-white text-xs focus:border-[#c5a869]"
+                              />
+                            ) : aboutLangTab === 'en' ? (
+                              <textarea
+                                rows={2}
+                                value={settings.aboutConfidentialityEn || ''}
+                                onChange={(e) => setSettings({ ...settings, aboutConfidentialityEn: e.target.value })}
+                                className="w-full p-2.5 rounded-lg bg-slate-900 border border-slate-700 text-white text-xs focus:border-[#c5a869]"
+                              />
+                            ) : (
+                              <textarea
+                                rows={2}
+                                value={settings.aboutConfidentialityTr || ''}
+                                onChange={(e) => setSettings({ ...settings, aboutConfidentialityTr: e.target.value })}
+                                className="w-full p-2.5 rounded-lg bg-slate-900 border border-slate-700 text-white text-xs focus:border-[#c5a869]"
+                              />
+                            )}
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                            <div>
+                              <label className="block text-[10px] text-slate-400 mb-0.5">{isAr ? 'النقطة المدعمة 1:' : 'Bullet Point 1:'}</label>
+                              <input
+                                type="text"
+                                value={(aboutLangTab === 'ar' ? settings.aboutConfidentialityPoint1Ar : aboutLangTab === 'en' ? settings.aboutConfidentialityPoint1En : settings.aboutConfidentialityPoint1Tr) || ''}
+                                onChange={(e) => {
+                                  if (aboutLangTab === 'ar') setSettings({ ...settings, aboutConfidentialityPoint1Ar: e.target.value });
+                                  else if (aboutLangTab === 'en') setSettings({ ...settings, aboutConfidentialityPoint1En: e.target.value });
+                                  else setSettings({ ...settings, aboutConfidentialityPoint1Tr: e.target.value });
+                                }}
+                                placeholder={isAr ? 'اتفاقيات عدم إفصاح مغلظة' : 'Stringent NDA protocols'}
+                                className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-white text-xs focus:border-[#c5a869]"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] text-slate-400 mb-0.5">{isAr ? 'النقطة المدعمة 2:' : 'Bullet Point 2:'}</label>
+                              <input
+                                type="text"
+                                value={(aboutLangTab === 'ar' ? settings.aboutConfidentialityPoint2Ar : aboutLangTab === 'en' ? settings.aboutConfidentialityPoint2En : settings.aboutConfidentialityPoint2Tr) || ''}
+                                onChange={(e) => {
+                                  if (aboutLangTab === 'ar') setSettings({ ...settings, aboutConfidentialityPoint2Ar: e.target.value });
+                                  else if (aboutLangTab === 'en') setSettings({ ...settings, aboutConfidentialityPoint2En: e.target.value });
+                                  else setSettings({ ...settings, aboutConfidentialityPoint2Tr: e.target.value });
+                                }}
+                                placeholder={isAr ? 'قنوات اتصال مشفرة مع الموكلين' : 'Encrypted client communications'}
+                                className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-white text-xs focus:border-[#c5a869]"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Section 4: Award/Ranking Card */}
+                      <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
+                        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                          <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                            <Trophy className="w-4 h-4 text-[#c5a869]" />
+                            <span>
+                              {isAr ? '4. بطاقة التصنيف والجوائز الدولية العائمة' : '4. Floating Award & Ranking Card'}
+                            </span>
+                          </h4>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-xs text-slate-300 font-semibold mb-1">
+                              {isAr ? 'عنوان الجائزة / التصنيف:' : 'Award / Ranking Title:'}
+                            </label>
+                            <input
+                              type="text"
+                              value={(aboutLangTab === 'ar' ? settings.aboutRankingTitleAr : aboutLangTab === 'en' ? settings.aboutRankingTitleEn : settings.aboutRankingTitleTr) || ''}
+                              onChange={(e) => {
+                                if (aboutLangTab === 'ar') setSettings({ ...settings, aboutRankingTitleAr: e.target.value });
+                                else if (aboutLangTab === 'en') setSettings({ ...settings, aboutRankingTitleEn: e.target.value });
+                                else setSettings({ ...settings, aboutRankingTitleTr: e.target.value });
+                              }}
+                              placeholder={isAr ? 'مصنف كأفضل مكتب محاماة للشركات والتحكيم' : 'Ranked Top-Tier Corporate Firm'}
+                              className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869]"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-slate-300 font-semibold mb-1">
+                              {isAr ? 'وصف جهة الاعتماد / السنة:' : 'Accreditation / Year Description:'}
+                            </label>
+                            <input
+                              type="text"
+                              value={(aboutLangTab === 'ar' ? settings.aboutRankingDescAr : aboutLangTab === 'en' ? settings.aboutRankingDescEn : settings.aboutRankingDescTr) || ''}
+                              onChange={(e) => {
+                                if (aboutLangTab === 'ar') setSettings({ ...settings, aboutRankingDescAr: e.target.value });
+                                else if (aboutLangTab === 'en') setSettings({ ...settings, aboutRankingDescEn: e.target.value });
+                                else setSettings({ ...settings, aboutRankingDescTr: e.target.value });
+                              }}
+                              placeholder={isAr ? 'وفق التصنيف القانوني الدولي 2024-2026' : 'According to Global Legal Directories 2024-2026'}
+                              className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869]"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right 5 Cols: Visual Image + Live Interactive Preview */}
+                    <div className="lg:col-span-5 space-y-6">
+                      
+                      {/* Image Manager & Presets */}
+                      <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
+                        <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                          <ImageIcon className="w-4 h-4 text-[#c5a869]" />
+                          <span>{isAr ? 'صورة قسم عن المكتب والمسيرة' : 'About Section Visual & Image'}</span>
+                        </h4>
+
+                        <ImageUploader
+                          value={settings.aboutImageUrl || PRESET_ABOUT_IMAGES[0]}
+                          onChange={(url) => setSettings({ ...settings, aboutImageUrl: url })}
+                          label={isAr ? 'صورة قاعة الاجتماعات أو المقر الرئيسي' : 'Boardroom or HQ Image'}
+                          presets={PRESET_ABOUT_IMAGES}
+                          aspectRatio="wide"
+                          lang={lang}
+                        />
+
+                        {/* Preset options */}
+                        <div>
+                          <label className="block text-[11px] text-slate-400 font-semibold mb-2">
+                            {isAr ? 'أو اختر من الصور الفاخرة المعتمدة:' : 'Or choose from certified executive imagery:'}
+                          </label>
+                          <div className="grid grid-cols-3 gap-2">
+                            {PRESET_ABOUT_IMAGES.map((imgUrl, i) => (
+                              <button
+                                key={i}
+                                type="button"
+                                onClick={() => setSettings({ ...settings, aboutImageUrl: imgUrl })}
+                                className={`relative rounded-lg overflow-hidden h-16 border-2 transition cursor-pointer group ${
+                                  settings.aboutImageUrl === imgUrl ? 'border-[#c5a869] shadow-md ring-2 ring-[#c5a869]/30' : 'border-slate-800 opacity-70 hover:opacity-100'
+                                }`}
+                              >
+                                <img src={imgUrl} alt={`Preset ${i + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition" />
+                                {settings.aboutImageUrl === imgUrl && (
+                                  <div className="absolute inset-0 bg-[#c5a869]/30 flex items-center justify-center">
+                                    <Check className="w-4 h-4 text-white drop-shadow-md" />
+                                  </div>
+                                )}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Live Interactive Preview Card */}
+                      <div className="p-5 rounded-2xl bg-[#f7f2e8] border border-[#c5a869]/40 shadow-xl space-y-4 text-slate-900">
+                        <div className="flex items-center justify-between border-b border-[#e6ddcc] pb-2">
+                          <div className="flex items-center gap-1.5 text-xs font-bold text-[#87641d]">
+                            <Eye className="w-4 h-4" />
+                            <span>{isAr ? 'معاينة تفاعلية حية (مظهر القسم الفعلي):' : 'Live Interactive Preview:'}</span>
+                          </div>
+                          <span className="text-[10px] px-2 py-0.5 rounded bg-[#b38a38]/15 text-[#87641d] font-bold">
+                            {aboutLangTab.toUpperCase()}
+                          </span>
+                        </div>
+
+                        {/* Miniature Render */}
+                        <div className="space-y-3">
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#b38a38]/15 text-[#87641d] text-[10px] font-bold">
+                            <BookOpen className="w-3 h-3" />
+                            <span>
+                              {aboutLangTab === 'ar' ? (settings.aboutBadgeAr || 'عن المكتب والمسيرة') : aboutLangTab === 'en' ? (settings.aboutBadgeEn || 'About Us') : (settings.aboutBadgeTr || 'Hakkımızda')}
+                            </span>
+                          </div>
+
+                          <h3 className="text-sm font-bold text-[#181512] font-serif leading-snug">
+                            {aboutLangTab === 'ar' ? (settings.aboutHeadingAr || 'أكثر من ربع قرن في حماية الاستثمارات') : aboutLangTab === 'en' ? (settings.aboutHeadingEn || 'Over a Quarter Century...') : (settings.aboutHeadingTr || 'Çeyrek asrı aşkın süredir...')}
+                          </h3>
+
+                          <p className="text-xs text-[#4b4334] line-clamp-3 leading-relaxed">
+                            {aboutLangTab === 'ar' ? (settings.aboutTextAr || 'نبذة المكتب...') : aboutLangTab === 'en' ? (settings.aboutTextEn || 'Firm narrative...') : (settings.aboutTextTr || 'Büro hikayesi...')}
+                          </p>
+
+                          {/* Mini Tabs */}
+                          <div className="flex gap-2 border-b border-[#e6ddcc] pb-1 pt-1">
+                            {(['vision', 'methodology', 'standards'] as const).map((tab) => (
+                              <button
+                                key={tab}
+                                type="button"
+                                onClick={() => setAboutPreviewTab(tab)}
+                                className={`text-[11px] pb-1 font-bold border-b-2 transition cursor-pointer ${
+                                  aboutPreviewTab === tab ? 'border-[#b38a38] text-[#87641d]' : 'border-transparent text-slate-500'
+                                }`}
+                              >
+                                {tab === 'vision' ? (isAr ? 'الرؤية' : 'Vision') : tab === 'methodology' ? (isAr ? 'المنهجية' : 'Method') : (isAr ? 'السرية' : 'Standards')}
+                              </button>
+                            ))}
+                          </div>
+
+                          {/* Mini Tab Content */}
+                          <div className="text-[11px] text-[#4b4334] bg-white/80 p-2.5 rounded-xl border border-[#e6ddcc]">
+                            {aboutPreviewTab === 'vision' && (
+                              <div>
+                                <p className="line-clamp-2">{aboutLangTab === 'ar' ? settings.aboutVisionAr : aboutLangTab === 'en' ? settings.aboutVisionEn : settings.aboutVisionTr}</p>
+                                <div className="mt-1 flex items-center gap-1 text-[10px] text-[#2c261e] font-semibold">
+                                  <CheckCircle2 className="w-3 h-3 text-[#b38a38]" />
+                                  <span>{aboutLangTab === 'ar' ? settings.aboutVisionPoint1Ar : settings.aboutVisionPoint1En || 'حماية استباقية'}</span>
+                                </div>
+                              </div>
+                            )}
+                            {aboutPreviewTab === 'methodology' && (
+                              <div>
+                                <p className="line-clamp-2">{aboutLangTab === 'ar' ? settings.aboutMethodologyAr : aboutLangTab === 'en' ? settings.aboutMethodologyEn : settings.aboutMethodologyTr}</p>
+                                <div className="mt-1 flex items-center gap-1 text-[10px] text-[#2c261e] font-semibold">
+                                  <CheckCircle2 className="w-3 h-3 text-[#b38a38]" />
+                                  <span>{aboutLangTab === 'ar' ? settings.aboutMethodologyPoint1Ar : settings.aboutMethodologyPoint1En || 'تدقيق نافي للجهالة'}</span>
+                                </div>
+                              </div>
+                            )}
+                            {aboutPreviewTab === 'standards' && (
+                              <div>
+                                <p className="line-clamp-2">{aboutLangTab === 'ar' ? settings.aboutConfidentialityAr : aboutLangTab === 'en' ? settings.aboutConfidentialityEn : settings.aboutConfidentialityTr}</p>
+                                <div className="mt-1 flex items-center gap-1 text-[10px] text-[#2c261e] font-semibold">
+                                  <CheckCircle2 className="w-3 h-3 text-[#b38a38]" />
+                                  <span>{aboutLangTab === 'ar' ? settings.aboutConfidentialityPoint1Ar : settings.aboutConfidentialityPoint1En || 'سرية بنكية مشددة'}</span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Mini CTA button */}
+                          <div className="pt-2">
+                            <button
+                              type="button"
+                              className="w-full py-2 rounded-xl bg-gradient-to-r from-[#b38a38] via-[#c5a869] to-[#87641d] text-white font-bold text-xs shadow"
+                            >
+                              {aboutLangTab === 'ar' ? (settings.aboutCtaTextAr || 'حجز جلسة عمل') : aboutLangTab === 'en' ? (settings.aboutCtaTextEn || 'Book Strategy Session') : (settings.aboutCtaTextTr || 'Strateji Görüşmesi')}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -3901,37 +4675,100 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
 
                   {/* About texts */}
                   <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
-                    <h4 className="text-xs font-bold text-white uppercase tracking-wider">
-                      {isAr ? 'نصوص قسم "عن المكتب"' : 'About Section Paragraphs'}
-                    </h4>
+                    <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                      <div>
+                        <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                          <BookOpen className="w-4 h-4 text-[#c5a869]" />
+                          <span>{isAr ? 'نصوص وهوية قسم «عن المكتب والمسيرة»' : 'About & Journey Texts & Identity'}</span>
+                        </h4>
+                        <p className="text-[11px] text-slate-400 mt-0.5">
+                          {isAr ? 'يمكنك تحرير النصوص هنا أو الانتقال للتبويب المخصص لمعاينة تفاعلية حية' : 'Edit texts here or jump to dedicated tab for live preview'}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('about')}
+                        className="px-3 py-1.5 rounded-lg bg-[#c5a869]/20 text-[#e5cb8e] hover:bg-[#c5a869]/30 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer border border-[#c5a869]/30"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        <span>{isAr ? 'فتح قسم المسيرة المتكامل ↗' : 'Open Dedicated About Tab ↗'}</span>
+                      </button>
+                    </div>
 
-                    <div>
-                      <label className="block text-xs text-slate-300 mb-1">النبذة الرئيسية</label>
+                    {/* Main Narrative (Ar, En, Tr) */}
+                    <div className="space-y-2">
+                      <label className="block text-xs font-semibold text-slate-200">
+                        {isAr ? 'النبذة الرئيسية وقصة المسيرة (عربي):' : 'Main Journey Narrative (Arabic):'}
+                      </label>
                       <textarea
                         rows={3}
                         value={settings.aboutTextAr}
                         onChange={(e) => setSettings({ ...settings, aboutTextAr: e.target.value })}
-                        className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs"
+                        className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869]"
                       />
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs text-slate-300 mb-1">نص الرؤية والرسالة</label>
+                        <label className="block text-[11px] text-slate-300 mb-1">
+                          {isAr ? 'قصة المسيرة (English):' : 'Narrative (English):'}
+                        </label>
+                        <textarea
+                          rows={2}
+                          value={settings.aboutTextEn || ''}
+                          onChange={(e) => setSettings({ ...settings, aboutTextEn: e.target.value })}
+                          className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869]"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] text-slate-300 mb-1">
+                          {isAr ? 'قصة المسيرة (Türkçe):' : 'Narrative (Turkish):'}
+                        </label>
+                        <textarea
+                          rows={2}
+                          value={settings.aboutTextTr || ''}
+                          onChange={(e) => setSettings({ ...settings, aboutTextTr: e.target.value })}
+                          className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869]"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Vision, Methodology, Confidentiality */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+                      <div>
+                        <label className="block text-[11px] text-slate-300 mb-1 font-semibold flex items-center gap-1">
+                          <Target className="w-3.5 h-3.5 text-[#c5a869]" />
+                          <span>{isAr ? 'نص الرؤية والرسالة (عربي)' : 'Vision (Ar)'}</span>
+                        </label>
                         <textarea
                           rows={3}
                           value={settings.aboutVisionAr || ''}
                           onChange={(e) => setSettings({ ...settings, aboutVisionAr: e.target.value })}
-                          className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs"
+                          className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869]"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs text-slate-300 mb-1">نص المنهجية والاستراتيجية</label>
+                        <label className="block text-[11px] text-slate-300 mb-1 font-semibold flex items-center gap-1">
+                          <Compass className="w-3.5 h-3.5 text-[#c5a869]" />
+                          <span>{isAr ? 'نص المنهجية والاستراتيجية (عربي)' : 'Methodology (Ar)'}</span>
+                        </label>
                         <textarea
                           rows={3}
                           value={settings.aboutMethodologyAr || ''}
                           onChange={(e) => setSettings({ ...settings, aboutMethodologyAr: e.target.value })}
-                          className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs"
+                          className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869]"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] text-slate-300 mb-1 font-semibold flex items-center gap-1">
+                          <Shield className="w-3.5 h-3.5 text-[#c5a869]" />
+                          <span>{isAr ? 'نص السرية والأمان (عربي)' : 'Confidentiality (Ar)'}</span>
+                        </label>
+                        <textarea
+                          rows={3}
+                          value={settings.aboutConfidentialityAr || ''}
+                          onChange={(e) => setSettings({ ...settings, aboutConfidentialityAr: e.target.value })}
+                          className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869]"
                         />
                       </div>
                     </div>

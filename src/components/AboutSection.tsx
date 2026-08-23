@@ -14,9 +14,32 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ settings, lang, onOp
   const t = useTranslation(lang);
 
   const aboutText = getLocalized(settings, 'aboutText', lang, settings.aboutTextAr);
+  const aboutHeading = getLocalized(settings, 'aboutHeading', lang, settings.aboutHeadingAr || (
+    lang === 'ar' 
+      ? 'أكثر من ربع قرن في حماية الاستثمارات وصناعة القرارات القانونية الفارقة' 
+      : lang === 'tr' 
+      ? 'Çeyrek asrı aşkın süredir Yatırımları Koruyor ve Stratejik Hukuki Zaferlere İmza Atıyoruz' 
+      : 'Over a Quarter Century of Protecting Capital & Shaping High-Stakes Law'
+  ));
+  const aboutBadge = getLocalized(settings, 'aboutBadge', lang, settings.aboutBadgeAr || t.aboutBadge);
   const aboutVision = getLocalized(settings, 'aboutVision', lang, settings.aboutVisionAr || '');
   const aboutMethodology = getLocalized(settings, 'aboutMethodology', lang, settings.aboutMethodologyAr || '');
   const aboutConfidentiality = getLocalized(settings, 'aboutConfidentiality', lang, settings.aboutConfidentialityAr || '');
+
+  // Dynamic Bullet points
+  const visionP1 = getLocalized(settings, 'aboutVisionPoint1', lang, settings.aboutVisionPoint1Ar || (lang === 'ar' ? 'حماية استباقية للأصول والمصالح' : lang === 'tr' ? 'Varlık ve Hakların Proaktif Korunması' : 'Proactive asset shielding'));
+  const visionP2 = getLocalized(settings, 'aboutVisionPoint2', lang, settings.aboutVisionPoint2Ar || (lang === 'ar' ? 'تمثيل قضائي وتحكيمي لا مثيل له' : lang === 'tr' ? 'Kusursuz Tahkim ve Dava Temsili' : 'Unmatched arbitral representation'));
+
+  const methodP1 = getLocalized(settings, 'aboutMethodologyPoint1', lang, settings.aboutMethodologyPoint1Ar || (lang === 'ar' ? 'تدقيق قانوني نافي للجهالة متكامل' : lang === 'tr' ? 'Kapsamlı Hukuki Durum Tespiti (Due Diligence)' : 'Comprehensive due diligence'));
+  const methodP2 = getLocalized(settings, 'aboutMethodologyPoint2', lang, settings.aboutMethodologyPoint2Ar || (lang === 'ar' ? 'صياغة عقود محصنة من النزاعات' : lang === 'tr' ? 'Uyuşmazlıklara Karşı Korumalı Sözleşmeler' : 'Dispute-proof contractual drafting'));
+
+  const confP1 = getLocalized(settings, 'aboutConfidentialityPoint1', lang, settings.aboutConfidentialityPoint1Ar || (lang === 'ar' ? 'اتفاقيات عدم إفصاح مغلظة' : lang === 'tr' ? 'Katı Gizlilik ve Gizli Kalma Protokolleri' : 'Stringent NDA protocols'));
+  const confP2 = getLocalized(settings, 'aboutConfidentialityPoint2', lang, settings.aboutConfidentialityPoint2Ar || (lang === 'ar' ? 'قنوات اتصال مشفرة مع الموكلين' : lang === 'tr' ? 'Müvekkillerle Uçtan Uca Şifreli İletişim' : 'Encrypted client communications'));
+
+  const rankingTitle = getLocalized(settings, 'aboutRankingTitle', lang, settings.aboutRankingTitleAr || t.aboutRankingTitle);
+  const rankingDesc = getLocalized(settings, 'aboutRankingDesc', lang, settings.aboutRankingDescAr || t.aboutRankingDesc);
+  const ctaText = getLocalized(settings, 'aboutCtaText', lang, settings.aboutCtaTextAr || t.aboutBookMeeting);
+  const sectionImage = settings.aboutImageUrl || "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=1000";
 
   return (
     <section id="about" className="py-24 bg-[#f7f2e8] relative overflow-hidden border-t border-[#e6ddcc]">
@@ -31,7 +54,7 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ settings, lang, onOp
           <div className="lg:col-span-5 relative">
             <div className="relative rounded-2xl overflow-hidden shadow-xl border border-[#c5a869]/40 group">
               <img
-                src="https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=1000"
+                src={sectionImage}
                 alt="Law Firm Executive Boardroom"
                 className="w-full h-[480px] object-cover group-hover:scale-105 transition-transform duration-700"
               />
@@ -45,10 +68,10 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ settings, lang, onOp
                   </div>
                   <div>
                     <h4 className="text-[#181512] font-bold text-sm">
-                      {t.aboutRankingTitle}
+                      {rankingTitle}
                     </h4>
                     <p className="text-xs text-[#87641d] font-semibold">
-                      {t.aboutRankingDesc}
+                      {rankingDesc}
                     </p>
                   </div>
                 </div>
@@ -67,26 +90,14 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ settings, lang, onOp
             {/* Section Tag */}
             <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#b38a38]/12 border border-[#b38a38]/30 text-[#87641d] text-xs font-bold uppercase tracking-wider mb-4">
               <BookOpen className="w-3.5 h-3.5" />
-              <span>{t.aboutBadge}</span>
+              <span>{aboutBadge}</span>
             </div>
 
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-serif-title font-bold text-[#181512] tracking-tight mb-6 leading-tight">
-              {lang === 'ar' ? (
-                <>
-                  أكثر من ربع قرن في <span className="gold-gradient-text">حماية الاستثمارات وصناعة القرارات القانونية الفارقة</span>
-                </>
-              ) : lang === 'tr' ? (
-                <>
-                  Çeyrek asrı aşkın süredir <span className="gold-gradient-text">Yatırımları Koruyor ve Stratejik Hukuki Zaferlere İmza Atıyoruz</span>
-                </>
-              ) : (
-                <>
-                  Over a Quarter Century of <span className="gold-gradient-text">Protecting Capital & Shaping High-Stakes Law</span>
-                </>
-              )}
+              {aboutHeading}
             </h2>
 
-            <p className="text-[#4b4334] text-base sm:text-lg leading-relaxed mb-8 font-normal">
+            <p className="text-[#4b4334] text-base sm:text-lg leading-relaxed mb-8 font-normal whitespace-pre-line">
               {aboutText}
             </p>
 
@@ -133,15 +144,15 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ settings, lang, onOp
             <div className="min-h-[140px] text-[#4b4334] text-sm leading-relaxed mb-8">
               {activeTab === 'vision' && (
                 <div className="space-y-3">
-                  <p>{aboutVision}</p>
+                  <p className="whitespace-pre-line">{aboutVision}</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
                     <div className="flex items-center gap-2 text-[#2c261e] font-semibold">
-                      <CheckCircle2 className="w-4 h-4 text-[#b38a38]" />
-                      <span>{lang === 'ar' ? 'حماية استباقية للأصول والمصالح' : lang === 'tr' ? 'Varlık ve Hakların Proaktif Korunması' : 'Proactive asset shielding'}</span>
+                      <CheckCircle2 className="w-4 h-4 text-[#b38a38] flex-shrink-0" />
+                      <span>{visionP1}</span>
                     </div>
                     <div className="flex items-center gap-2 text-[#2c261e] font-semibold">
-                      <CheckCircle2 className="w-4 h-4 text-[#b38a38]" />
-                      <span>{lang === 'ar' ? 'تمثيل قضائي وتحكيمي لا مثيل له' : lang === 'tr' ? 'Kusursuz Tahkim ve Dava Temsili' : 'Unmatched arbitral representation'}</span>
+                      <CheckCircle2 className="w-4 h-4 text-[#b38a38] flex-shrink-0" />
+                      <span>{visionP2}</span>
                     </div>
                   </div>
                 </div>
@@ -149,15 +160,15 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ settings, lang, onOp
 
               {activeTab === 'methodology' && (
                 <div className="space-y-3">
-                  <p>{aboutMethodology}</p>
+                  <p className="whitespace-pre-line">{aboutMethodology}</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
                     <div className="flex items-center gap-2 text-[#2c261e] font-semibold">
-                      <CheckCircle2 className="w-4 h-4 text-[#b38a38]" />
-                      <span>{lang === 'ar' ? 'تدقيق قانوني نافي للجهالة متكامل' : lang === 'tr' ? 'Kapsamlı Hukuki Durum Tespiti (Due Diligence)' : 'Comprehensive due diligence'}</span>
+                      <CheckCircle2 className="w-4 h-4 text-[#b38a38] flex-shrink-0" />
+                      <span>{methodP1}</span>
                     </div>
                     <div className="flex items-center gap-2 text-[#2c261e] font-semibold">
-                      <CheckCircle2 className="w-4 h-4 text-[#b38a38]" />
-                      <span>{lang === 'ar' ? 'صياغة عقود محصنة من النزاعات' : lang === 'tr' ? 'Uyuşmazlıklara Karşı Korumalı Sözleşmeler' : 'Dispute-proof contractual drafting'}</span>
+                      <CheckCircle2 className="w-4 h-4 text-[#b38a38] flex-shrink-0" />
+                      <span>{methodP2}</span>
                     </div>
                   </div>
                 </div>
@@ -165,15 +176,15 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ settings, lang, onOp
 
               {activeTab === 'standards' && (
                 <div className="space-y-3">
-                  <p>{aboutConfidentiality}</p>
+                  <p className="whitespace-pre-line">{aboutConfidentiality}</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
                     <div className="flex items-center gap-2 text-[#2c261e] font-semibold">
-                      <CheckCircle2 className="w-4 h-4 text-[#b38a38]" />
-                      <span>{lang === 'ar' ? 'اتفاقيات عدم إفصاح مغلظة' : lang === 'tr' ? 'Katı Gizlilik ve Gizli Kalma Protokolleri' : 'Stringent NDA protocols'}</span>
+                      <CheckCircle2 className="w-4 h-4 text-[#b38a38] flex-shrink-0" />
+                      <span>{confP1}</span>
                     </div>
                     <div className="flex items-center gap-2 text-[#2c261e] font-semibold">
-                      <CheckCircle2 className="w-4 h-4 text-[#b38a38]" />
-                      <span>{lang === 'ar' ? 'قنوات اتصال مشفرة مع الموكلين' : lang === 'tr' ? 'Müvekkillerle Uçtan Uca Şifreli İletişim' : 'Encrypted client communications'}</span>
+                      <CheckCircle2 className="w-4 h-4 text-[#b38a38] flex-shrink-0" />
+                      <span>{confP2}</span>
                     </div>
                   </div>
                 </div>
@@ -187,7 +198,7 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ settings, lang, onOp
                 className="px-6 py-3.5 rounded-xl bg-gradient-to-r from-[#b38a38] via-[#c5a869] to-[#87641d] text-white font-bold text-sm hover:brightness-105 transition shadow-md flex items-center gap-2 cursor-pointer"
               >
                 <Users className="w-4 h-4" />
-                <span>{t.aboutBookMeeting}</span>
+                <span>{ctaText}</span>
               </button>
             </div>
           </div>

@@ -2189,7 +2189,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
                       {/* Names */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-xs font-semibold text-slate-300 mb-1">الاسم بالعربية *</label>
+                          <label className="block text-xs font-semibold text-slate-300 mb-1">{isAr ? 'الاسم بالعربية *' : 'Name (Arabic) *'}</label>
                           <input
                             type="text"
                             required
@@ -2200,7 +2200,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
                           />
                         </div>
                         <div>
-                          <label className="block text-xs font-semibold text-slate-300 mb-1">Name in English *</label>
+                          <label className="block text-xs font-semibold text-slate-300 mb-1">{isAr ? 'الاسم بالإنجليزية *' : 'Name in English *'}</label>
                           <input
                             type="text"
                             required
@@ -2215,7 +2215,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
                       {/* Titles */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-xs font-semibold text-slate-300 mb-1">المسمى المهني (عربي) *</label>
+                          <label className="block text-xs font-semibold text-slate-300 mb-1">{isAr ? 'المسمى المهني بالعربية *' : 'Professional Title (Arabic) *'}</label>
                           <input
                             type="text"
                             required
@@ -2226,7 +2226,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
                           />
                         </div>
                         <div>
-                          <label className="block text-xs font-semibold text-slate-300 mb-1">Title (English) *</label>
+                          <label className="block text-xs font-semibold text-slate-300 mb-1">{isAr ? 'المسمى المهني بالإنجليزية *' : 'Title (English) *'}</label>
                           <input
                             type="text"
                             required
@@ -2241,7 +2241,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
                       {/* Specialty & Stats */}
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div>
-                          <label className="block text-xs font-semibold text-slate-300 mb-1">مجال الاختصاص الرئيسي *</label>
+                          <label className="block text-xs font-semibold text-slate-300 mb-1">{isAr ? 'مجال الاختصاص الرئيسي بالعربية *' : 'Primary Specialty (Arabic) *'}</label>
                           <input
                             type="text"
                             required
@@ -2252,7 +2252,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
                           />
                         </div>
                         <div>
-                          <label className="block text-xs font-semibold text-slate-300 mb-1">سنوات الخبرة</label>
+                          <label className="block text-xs font-semibold text-slate-300 mb-1">{isAr ? 'سنوات الخبرة' : 'Years of Experience'}</label>
                           <input
                             type="number"
                             value={editingPartner.experienceYears}
@@ -2261,7 +2261,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
                           />
                         </div>
                         <div>
-                          <label className="block text-xs font-semibold text-slate-300 mb-1">ترخيص المحاماة / القيد</label>
+                          <label className="block text-xs font-semibold text-slate-300 mb-1">{isAr ? 'ترخيص المحاماة / القيد' : 'Bar Admission / License'}</label>
                           <input
                             type="text"
                             placeholder="مثال: الهيئة السعودية للمحامين (رقم 1432)"
@@ -2275,7 +2275,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
                       {/* English Specialty, Won cases, Languages */}
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div>
-                          <label className="block text-xs font-semibold text-slate-300 mb-1">Specialty in English *</label>
+                          <label className="block text-xs font-semibold text-slate-300 mb-1">{isAr ? 'مجال الاختصاص بالإنجليزية *' : 'Specialty in English *'}</label>
                           <input
                             type="text"
                             required
@@ -2400,30 +2400,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
                         </div>
                       </div>
 
-                      {/* Bio in Arabic & English */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-xs font-semibold text-slate-300 mb-1">النبذة المهنية (عربي) *</label>
-                          <textarea
-                            rows={3}
-                            required
-                            placeholder="سيرة مختصرة تشمل الخبرات والمرافعات وأبرز الإنجازات..."
-                            value={editingPartner.bio}
-                            onChange={(e) => setEditingPartner({ ...editingPartner, bio: e.target.value })}
-                            className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869] focus:outline-none leading-relaxed"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-semibold text-slate-300 mb-1">Professional Bio (English) *</label>
-                          <textarea
-                            rows={3}
-                            required
-                            placeholder="Brief bio highlighting litigation experience and achievements..."
-                            value={editingPartner.bioEn}
-                            onChange={(e) => setEditingPartner({ ...editingPartner, bioEn: e.target.value })}
-                            className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869] focus:outline-none leading-relaxed"
-                          />
-                        </div>
+                      {/* Bio in Arabic */}
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-300 mb-1">
+                          {isAr ? 'النبذة المهنية للمحامي / الشريك *' : 'Professional Bio *'}
+                        </label>
+                        <textarea
+                          rows={3}
+                          required
+                          placeholder="سيرة مختصرة تشمل الخبرات والمرافعات وأبرز الإنجازات..."
+                          value={editingPartner.bio}
+                          onChange={(e) => setEditingPartner({ ...editingPartner, bio: e.target.value })}
+                          className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869] focus:outline-none leading-relaxed"
+                        />
                       </div>
 
                       {/* Featured Checkbox */}
@@ -2793,7 +2782,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
                           <div>
                             <label className="text-xs font-bold text-[#e5cb8e] flex items-center gap-1.5">
                               <Tag className="w-4 h-4 text-[#c5a869]" />
-                              <span>{isAr ? 'التصنيف القانوني للاختصاص (Category & Classification) *' : 'Legal Practice Category *'}</span>
+                              <span>{isAr ? 'التصنيف القانوني للاختصاص *' : 'Legal Practice Category *'}</span>
                             </label>
                             <p className="text-[11px] text-slate-400 mt-0.5">
                               {isAr ? 'اختر من التصنيفات القياسية المعتمدة، أو قم بتعديل وتسمية تصنيف مخصص بحرية تامة:' : 'Choose a standard classification or customize your own:'}
@@ -2801,7 +2790,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
                           </div>
 
                           <div className="flex items-center gap-2">
-                            <span className="text-[11px] text-slate-400">التصنيف الحالي:</span>
+                            <span className="text-[11px] text-slate-400">{isAr ? 'التصنيف الحالي:' : 'Current Category:'}</span>
                             <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-[#c5a869]/20 text-[#e5cb8e] border border-[#c5a869]/40">
                               {editingPractice.categoryLabelAr || editingPractice.category}
                             </span>
@@ -2870,21 +2859,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
                           </button>
                         </div>
 
-                        {/* Editable Classification Inputs (Allows changing/renaming category code and display names) */}
+                        {/* Editable Classification Inputs (Allows changing/renaming category code and display name) */}
                         <div className="pt-3 border-t border-slate-800/80">
                           <div className="flex items-center justify-between mb-2">
                             <span className="text-[11px] font-semibold text-slate-300">
-                              {isAr ? '✏️ تعديل مسميات ورمز التصنيف المختار:' : '✏️ Edit Category Code & Custom Labels:'}
+                              {isAr ? '✏️ تعديل مسمى ورمز التصنيف المختار:' : '✏️ Edit Category Code & Label:'}
                             </span>
                             <span className="text-[10px] text-slate-500">
-                              {isAr ? 'يمكنك تعديل الاسم العربي والإنجليزي للتصنيف بحرية' : 'Freely customize both Arabic and English names'}
+                              {isAr ? 'يمكنك تعديل مسمى ورمز التصنيف بحرية' : 'Freely customize category code and name'}
                             </span>
                           </div>
 
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div>
                               <label className="block text-[11px] font-semibold text-slate-300 mb-1">
-                                {isAr ? 'رمز التصنيف الداخلي (Category Key) *' : 'Category Key *'}
+                                {isAr ? 'رمز التصنيف الداخلي *' : 'Category Key *'}
                               </label>
                               <input
                                 type="text"
@@ -2898,7 +2887,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
 
                             <div>
                               <label className="block text-[11px] font-semibold text-slate-300 mb-1">
-                                {isAr ? 'اسم التصنيف بالعربية (العرض للزوار) *' : 'Category Title (Arabic) *'}
+                                {isAr ? 'اسم التصنيف القانوني *' : 'Category Title *'}
                               </label>
                               <input
                                 type="text"
@@ -2909,48 +2898,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
                                 className="w-full px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-white text-xs focus:border-[#c5a869] focus:outline-none"
                               />
                             </div>
-
-                            <div>
-                              <label className="block text-[11px] font-semibold text-slate-300 mb-1">
-                                {isAr ? 'Category Title in English *' : 'Category Title (English) *'}
-                              </label>
-                              <input
-                                type="text"
-                                required
-                                value={editingPractice.categoryLabelEn || ''}
-                                onChange={(e) => setEditingPractice({ ...editingPractice, categoryLabelEn: e.target.value })}
-                                placeholder="e.g. Corporate & M&A"
-                                className="w-full px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-white text-xs focus:border-[#c5a869] focus:outline-none"
-                              />
-                            </div>
                           </div>
                         </div>
                       </div>
 
-                      {/* --- SECTION 2: PRACTICE DETAILS (Titles, Icon & Supervising Lead Attorney) --- */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-xs font-semibold text-slate-300 mb-1">اسم الاختصاص القانوني (عربي) *</label>
-                          <input
-                            type="text"
-                            required
-                            placeholder="مثال: قانون الشركات والصفقات والاندماج"
-                            value={editingPractice.title}
-                            onChange={(e) => setEditingPractice({ ...editingPractice, title: e.target.value })}
-                            className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869] focus:outline-none"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-semibold text-slate-300 mb-1">Practice Area Title (English) *</label>
-                          <input
-                            type="text"
-                            required
-                            placeholder="e.g. Corporate Governance & M&A Transactions"
-                            value={editingPractice.titleEn}
-                            onChange={(e) => setEditingPractice({ ...editingPractice, titleEn: e.target.value })}
-                            className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869] focus:outline-none"
-                          />
-                        </div>
+                      {/* --- SECTION 2: PRACTICE DETAILS (Title, Icon & Supervising Lead Attorney) --- */}
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-300 mb-1">{isAr ? 'اسم الاختصاص القانوني *' : 'Practice Area Title *'}</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="مثال: قانون الشركات والصفقات والاندماج"
+                          value={editingPractice.title}
+                          onChange={(e) => setEditingPractice({ ...editingPractice, title: e.target.value })}
+                          className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869] focus:outline-none"
+                        />
                       </div>
 
                       {/* Icon Selector & Supervising Lead Partner */}
@@ -3018,54 +2980,33 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
                         helpText={isAr ? "ارفع صورة خلفية عالية الدقة من جهازك أو اختر من النماذج المعمارية الفاخرة." : "Upload high-res background from device or choose preset."}
                       />
 
-                      {/* Short descriptions */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-xs font-semibold text-slate-300 mb-1">الوصف المختصر (عربي) *</label>
-                          <textarea
-                            rows={2}
-                            required
-                            placeholder="نبذة موجزة تظهر في بطاقة الاختصاص..."
-                            value={editingPractice.shortDesc}
-                            onChange={(e) => setEditingPractice({ ...editingPractice, shortDesc: e.target.value })}
-                            className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869] focus:outline-none"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-semibold text-slate-300 mb-1">Short Description (English) *</label>
-                          <textarea
-                            rows={2}
-                            required
-                            placeholder="Brief synopsis shown on the card preview..."
-                            value={editingPractice.shortDescEn}
-                            onChange={(e) => setEditingPractice({ ...editingPractice, shortDescEn: e.target.value })}
-                            className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869] focus:outline-none"
-                          />
-                        </div>
+                      {/* Short description */}
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-300 mb-1">
+                          {isAr ? 'الوصف الموجز للاختصاص *' : 'Short Description *'}
+                        </label>
+                        <textarea
+                          rows={2}
+                          required
+                          placeholder="نبذة موجزة تظهر في بطاقة الاختصاص..."
+                          value={editingPractice.shortDesc}
+                          onChange={(e) => setEditingPractice({ ...editingPractice, shortDesc: e.target.value })}
+                          className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869] focus:outline-none"
+                        />
                       </div>
 
-                      {/* Full descriptions */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-xs font-semibold text-slate-300 mb-1">الوصف التفصيلي الكامل (عربي)</label>
-                          <textarea
-                            rows={3}
-                            placeholder="شرح متكامل يظهر في النافذة المنبثقة للاختصاص واستعراض الخبرات..."
-                            value={editingPractice.fullDesc}
-                            onChange={(e) => setEditingPractice({ ...editingPractice, fullDesc: e.target.value })}
-                            className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869] focus:outline-none"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-semibold text-slate-300 mb-1">Full Detailed Overview (English)</label>
-                          <textarea
-                            rows={3}
-                            placeholder="Detailed overview for the popup modal explaining advisory depth..."
-                            value={editingPractice.fullDescEn}
-                            onChange={(e) => setEditingPractice({ ...editingPractice, fullDescEn: e.target.value })}
-                            className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869] focus:outline-none"
-                          />
-                        </div>
+                      {/* Full description */}
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-300 mb-1">
+                          {isAr ? 'الوصف التفصيلي الكامل للاختصاص' : 'Full Detailed Overview'}
+                        </label>
+                        <textarea
+                          rows={3}
+                          placeholder="شرح متكامل يظهر في النافذة المنبثقة للاختصاص واستعراض الخبرات..."
+                          value={editingPractice.fullDesc}
+                          onChange={(e) => setEditingPractice({ ...editingPractice, fullDesc: e.target.value })}
+                          className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869] focus:outline-none"
+                        />
                       </div>
 
                       {/* Key services dynamic builder */}
@@ -3873,7 +3814,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-xs text-slate-300 mb-1">المدينة (عربي) *</label>
+                          <label className="block text-xs text-slate-300 mb-1">{isAr ? 'المدينة بالعربية *' : 'City (Arabic) *'}</label>
                           <input
                             type="text"
                             required
@@ -3883,7 +3824,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
                           />
                         </div>
                         <div>
-                          <label className="block text-xs text-slate-300 mb-1">City (English) *</label>
+                          <label className="block text-xs text-slate-300 mb-1">{isAr ? 'المدينة بالإنجليزية *' : 'City (English) *'}</label>
                           <input
                             type="text"
                             required
@@ -3896,7 +3837,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-xs text-slate-300 mb-1">الهاتف *</label>
+                          <label className="block text-xs text-slate-300 mb-1">{isAr ? 'الهاتف *' : 'Phone *'}</label>
                           <input
                             type="text"
                             required
@@ -3906,7 +3847,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
                           />
                         </div>
                         <div>
-                          <label className="block text-xs text-slate-300 mb-1">البريد الإلكتروني *</label>
+                          <label className="block text-xs text-slate-300 mb-1">{isAr ? 'البريد الإلكتروني *' : 'Email *'}</label>
                           <input
                             type="email"
                             required
@@ -3918,7 +3859,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
                       </div>
 
                       <div>
-                        <label className="block text-xs text-slate-300 mb-1">العنوان التفصيلي (عربي) *</label>
+                        <label className="block text-xs text-slate-300 mb-1">{isAr ? 'العنوان التفصيلي بالعربية *' : 'Detailed Address (Arabic) *'}</label>
                         <input
                           type="text"
                           required
@@ -3929,7 +3870,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
                       </div>
 
                       <div>
-                        <label className="block text-xs text-slate-300 mb-1">رابط تضمين Google Maps (Embed URL)</label>
+                        <label className="block text-xs text-slate-300 mb-1">{isAr ? 'رابط خريطة Google Maps (رابط التضمين أو الرابط المباشر للموقع)' : 'Google Maps Embed or Direct URL'}</label>
                         <input
                           type="url"
                           value={editingOffice.mapEmbedUrl}
@@ -4151,7 +4092,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-semibold text-slate-200 mb-1">اسم المكتب بالعربية *</label>
+                        <label className="block text-xs font-semibold text-slate-200 mb-1">{isAr ? 'اسم المكتب بالعربية *' : 'Firm Name in Arabic *'}</label>
                         <input
                           type="text"
                           required
@@ -4161,7 +4102,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-slate-200 mb-1">Firm Name in English *</label>
+                        <label className="block text-xs font-semibold text-slate-200 mb-1">{isAr ? 'اسم المكتب بالإنجليزية *' : 'Firm Name in English *'}</label>
                         <input
                           type="text"
                           required
@@ -4175,7 +4116,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-xs font-semibold text-[#e5cb8e] mb-1">
-                          {isAr ? 'الشعار اللفظي الرئيسي / العنوان الأبرز في الواجهة (عربي) *' : 'Main Slogan / Hero Headline (Arabic) *'}
+                          {isAr ? 'الشعار اللفظي الرئيسي بالعربية *' : 'Main Slogan in Arabic *'}
                         </label>
                         <input
                           type="text"
@@ -4191,7 +4132,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
                       </div>
                       <div>
                         <label className="block text-xs font-semibold text-[#e5cb8e] mb-1">
-                          {isAr ? 'Main Slogan / Hero Headline (English) *' : 'Main Slogan (English) *'}
+                          {isAr ? 'الشعار اللفظي الرئيسي بالإنجليزية *' : 'Main Slogan in English *'}
                         </label>
                         <input
                           type="text"
@@ -4206,7 +4147,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
 
                     <div>
                       <label className="block text-xs font-semibold text-slate-300 mb-1">
-                        {isAr ? 'العبارة التعريفية الفرعية في الواجهة (Sub-slogan)' : 'Hero Sub-headline'}
+                        {isAr ? 'العبارة التعريفية الفرعية في الواجهة بالعربية' : 'Hero Sub-headline (Arabic)'}
                       </label>
                       <textarea
                         rows={2}
@@ -4852,39 +4793,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
                         </div>
                       </div>
 
-                      {/* Address Inputs with Multiline Textarea */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                        <div>
-                          <label className="block text-xs font-semibold text-slate-300 mb-1">
-                            {isAr ? 'العنوان التفصيلي للمقر (عربي) - يدعم أسطر متعددة' : 'Detailed Address (Arabic)'}
-                          </label>
-                          <textarea
-                            rows={3}
-                            value={settings.addressAr}
-                            onChange={(e) => setSettings({ ...settings, addressAr: e.target.value })}
-                            placeholder={'برج المملكة، الطابق 42\nطريق الملك فهد\nالرياض، المملكة العربية السعودية'}
-                            className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs focus:border-[#c5a869] focus:outline-none"
-                          />
-                          <span className="text-[10px] text-slate-400">
-                            {isAr ? 'اضغط Enter لإنشاء سطر جديد' : 'Press Enter to create new line'}
-                          </span>
-                        </div>
-
-                        <div>
-                          <label className="block text-xs font-semibold text-slate-300 mb-1">
-                            {isAr ? 'Detailed Address (English) - Supports Multiline' : 'Detailed Address (English)'}
-                          </label>
-                          <textarea
-                            rows={3}
-                            value={settings.addressEn}
-                            onChange={(e) => setSettings({ ...settings, addressEn: e.target.value })}
-                            placeholder={'Kingdom Tower, 42nd Floor\nKing Fahd Road\nRiyadh, Saudi Arabia'}
-                            className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs focus:border-[#c5a869] focus:outline-none"
-                          />
-                          <span className="text-[10px] text-slate-400">
-                            {isAr ? 'Supports multi-line formatting' : 'Supports multi-line formatting'}
-                          </span>
-                        </div>
+                      {/* Address Input with Multiline Textarea */}
+                      <div className="pt-2">
+                        <label className="block text-xs font-semibold text-slate-300 mb-1">
+                          {isAr ? 'العنوان التفصيلي للمقر الرئيسي (يدعم أسطر متعددة)' : 'Detailed Headquarters Address (Supports Multiline)'}
+                        </label>
+                        <textarea
+                          rows={3}
+                          value={settings.addressAr}
+                          onChange={(e) => setSettings({ ...settings, addressAr: e.target.value })}
+                          placeholder={'برج المملكة، الطابق 42\nطريق الملك فهد\nالرياض، المملكة العربية السعودية'}
+                          className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs focus:border-[#c5a869] focus:outline-none"
+                        />
+                        <span className="text-[10px] text-slate-400">
+                          {isAr ? 'اضغط Enter لإنشاء سطر جديد لتنظيم العنوان' : 'Press Enter to create new line'}
+                        </span>
                       </div>
 
                       {/* Quick Presets for Address format */}

@@ -7,9 +7,10 @@ import {
   UserCheck, Briefcase, UserPlus, GraduationCap, Building2, Gavel, Landmark, Globe, Layers, Tag,
   Layout, Sliders, Type, AlignCenter, AlignRight, Maximize2, Move, MapPin,
   Languages, Wand2, ArrowRightLeft, Loader2, Target, Compass, Award, History, FileText,
-  Copy, Code2, HardDrive, Cloud, FileCode
+  Copy, Code2, HardDrive, Cloud, FileCode, Rocket, GitBranch, Play
 } from 'lucide-react';
 import { storageService } from '../services/storageService';
+import { vercelSyncService, VercelSyncConfig } from '../services/vercelSyncService';
 import { Partner, PracticeArea, Testimonial, BlogPost, CaseStudy, ContactMessage, SiteSettings, OfficeLocation, Language } from '../types';
 import { ImageUploader } from './ImageUploader';
 import { 
@@ -161,6 +162,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
   const [tempServiceItem, setTempServiceItem] = useState('');
   const [tempTagItem, setTempTagItem] = useState('');
   const [copiedTS, setCopiedTS] = useState(false);
+
+  // Vercel & GitHub Sync State
+  const [vercelConfig, setVercelConfig] = useState<VercelSyncConfig>(() => vercelSyncService.getConfig());
+  const [isDeployingVercel, setIsDeployingVercel] = useState(false);
+  const [vercelDeployProgress, setVercelDeployProgress] = useState('');
+  const [vercelDeployResult, setVercelDeployResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [showVercelConfigDetails, setShowVercelConfigDetails] = useState(false);
 
   // Feedback Notification
   const [feedback, setFeedback] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
@@ -535,6 +543,62 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
     showToast(isAr ? 'تم تنزيل ملف site_data.json لمجلد public' : 'Downloaded site_data.json');
   };
 
+  const handleSaveVercelConfig = (newConfig: VercelSyncConfig) => {
+    setVercelConfig(newConfig);
+    vercelSyncService.saveConfig(newConfig);
+    showToast(isAr ? 'تم حفظ إعدادات الاتصال بـ GitHub و Vercel بنجاح' : 'GitHub & Vercel credentials saved');
+  };
+
+  const handleDeployToVercelDirect = async () => {
+    if (!vercelConfig.githubRepo || !vercelConfig.githubToken) {
+      setShowVercelConfigDetails(true);
+      showToast(
+        isAr 
+          ? 'يرجى إدخال اسم المستودع (GitHub Repo) ورمز الوصول (Token) للرفع المباشر' 
+          : 'Please enter GitHub Repo & Token first',
+        'error'
+      );
+      return;
+    }
+
+    setIsDeployingVercel(true);
+    setVercelDeployProgress(isAr ? 'جاري بدء الاتصال ومزامنة البيانات...' : 'Starting sync...');
+    setVercelDeployResult(null);
+
+    const result = await vercelSyncService.deployDataToGitHub((step) => {
+      setVercelDeployProgress(step);
+    });
+
+    setIsDeployingVercel(false);
+    setVercelDeployResult(result);
+
+    if (result.success) {
+      showToast(isAr ? '🚀 تم رفع ونشر كافة بياناتك إلى Vercel بنجاح!' : '🚀 Data deployed to Vercel successfully!');
+    } else {
+      showToast(result.message, 'error');
+    }
+  };
+
+  const handleTriggerVercelDeployHook = async () => {
+    if (!vercelConfig.deployHookUrl) {
+      setShowVercelConfigDetails(true);
+      showToast(isAr ? 'يرجى إدخال رابط Vercel Deploy Hook أولاً' : 'Please enter Deploy Hook URL first', 'error');
+      return;
+    }
+
+    setIsDeployingVercel(true);
+    setVercelDeployProgress(isAr ? 'جاري إرسال إشارة إعادة البناء إلى Vercel...' : 'Triggering Vercel Deploy Hook...');
+    const res = await vercelSyncService.triggerDeployHook();
+    setIsDeployingVercel(false);
+    setVercelDeployResult(res);
+
+    if (res.success) {
+      showToast(isAr ? 'تم تشغيل إعادة بناء موقعك على Vercel بنجاح!' : 'Vercel deployment triggered successfully!');
+    } else {
+      showToast(res.message, 'error');
+    }
+  };
+
   const handleResetDefaults = () => {
     if (confirm(isAr ? 'تحذير: هل أنت متأكد من إعادة تعيين كافة البيانات إلى الحالة الافتراضية؟' : 'Reset all data to default initial seed?')) {
       storageService.resetToDefaults();
@@ -614,6 +678,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
                   </span>
                 </button>
               </div>
+            )}
+
+            {isAuthenticated && (
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('backup');
+                  setShowVercelConfigDetails(true);
+                }}
+                className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600/30 via-emerald-500/40 to-teal-600/30 hover:from-emerald-600/50 hover:to-teal-600/50 border border-emerald-400/60 text-emerald-200 font-bold text-xs flex items-center gap-1.5 shadow-sm transition cursor-pointer"
+                title={isAr ? 'رفع ونشر كافة البيانات إلى Vercel ليراها جميع الزوار' : 'Deploy site data to Vercel'}
+              >
+                <Rocket className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="hidden sm:inline">{isAr ? 'رفع إلى Vercel' : 'Deploy to Vercel'}</span>
+                <span className="sm:hidden">{isAr ? 'Vercel' : 'Deploy'}</span>
+              </button>
             )}
 
             {isAuthenticated && (
@@ -4990,14 +5070,204 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
                 <div className="space-y-6 max-w-3xl">
                   <div>
                     <h3 className="text-xl font-bold font-serif-title text-white">
-                      {isAr ? 'النسخ الاحتياطي وحفظ البيانات على Vercel' : 'Backup & Vercel Data Persistence'}
+                      {isAr ? 'النسخ الاحتياطي ورفع البيانات إلى Vercel' : 'Backup & Vercel 1-Click Deployment'}
                     </h3>
                     <p className="text-xs text-slate-400">
-                      {isAr ? 'استيراد وحفظ البيانات على الموقع المرفوع، تصدير ملفات البيانات المصدرية، ومسح الذاكرة المؤقتة' : 'Import and persist data on deployed Vercel site, export source initial data, and manage cache'}
+                      {isAr ? 'رفع ونشر كافة بيانات الشركاء والمقالات والإعدادات إلى موقع Vercel بنقرة واحدة ليراها جميع الزوار' : '1-click deploy all site data directly to Vercel/GitHub so it shows for every visitor worldwide'}
                     </p>
                   </div>
 
-                  {/* 1. VERCEL DEPLOYMENT GUIDE & DIRECT IMPORT/RESTORE */}
+                  {/* 1. PRIMARY: VERCEL 1-CLICK CLOUD DEPLOY */}
+                  <div className="p-6 rounded-3xl bg-gradient-to-br from-emerald-950/60 via-slate-900 to-slate-950 border-2 border-emerald-500/60 shadow-2xl space-y-5 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+                    
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-slate-950 shadow-lg shadow-emerald-900/40">
+                          <Rocket className="w-6 h-6 animate-pulse" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-bold text-white text-base">
+                              {isAr ? 'رفع ونشر كافة البيانات إلى Vercel بنقرة واحدة' : '1-Click Direct Deploy to Vercel'}
+                            </h4>
+                            <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold">
+                              {isAr ? 'نشر سحابي فوري' : 'Live Sync'}
+                            </span>
+                          </div>
+                          <p className="text-xs text-emerald-200/80">
+                            {isAr ? 'يتم رفع ملفات البيانات وتحديث مستودعك تلقائياً ليقوم Vercel بنشرها لجميع زوار موقعك فوراً' : 'Pushes updated data directly to your repo; Vercel automatically builds and displays it to all visitors.'}
+                          </p>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setShowVercelConfigDetails(!showVercelConfigDetails)}
+                        className="px-3.5 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-medium flex items-center gap-1.5 transition self-start sm:self-auto cursor-pointer"
+                      >
+                        <Settings className="w-3.5 h-3.5 text-[#c5a869]" />
+                        <span>{showVercelConfigDetails ? (isAr ? 'إخفاء الإعدادات' : 'Hide Settings') : (isAr ? 'إعدادات الاتصال' : 'Connection Settings')}</span>
+                      </button>
+                    </div>
+
+                    {/* Quick Configuration Form (Collapsible / Expandable) */}
+                    {showVercelConfigDetails && (
+                      <div className="p-4 rounded-2xl bg-slate-950/90 border border-slate-800 space-y-4 animate-fade-in text-xs">
+                        <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                          <span className="font-bold text-white flex items-center gap-1.5">
+                            <GitBranch className="w-4 h-4 text-[#c5a869]" />
+                            {isAr ? 'إعدادات ربط مستودع GitHub و Vercel:' : 'GitHub & Vercel Credentials:'}
+                          </span>
+                          <span className="text-[11px] text-slate-400">
+                            {isAr ? '(يتم حفظها محلياً فقط في متصفحك بأمان)' : '(Saved securely in your browser only)'}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-slate-300 mb-1 font-medium">
+                              {isAr ? 'اسم المستودع (GitHub Repository):' : 'GitHub Repository:'}
+                            </label>
+                            <input
+                              type="text"
+                              value={vercelConfig.githubRepo}
+                              onChange={(e) => setVercelConfig({ ...vercelConfig, githubRepo: e.target.value })}
+                              placeholder="مثال: username/aladl-lawfirm"
+                              className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white focus:border-emerald-500 focus:outline-none"
+                            />
+                            <span className="text-[10px] text-slate-400 mt-0.5 block">
+                              {isAr ? 'اسم حسابك واسم المستودع على GitHub' : 'e.g. username/repo-name'}
+                            </span>
+                          </div>
+
+                          <div>
+                            <label className="block text-slate-300 mb-1 font-medium">
+                              {isAr ? 'رمز الوصول (GitHub Personal Access Token):' : 'GitHub Access Token:'}
+                            </label>
+                            <input
+                              type="password"
+                              value={vercelConfig.githubToken}
+                              onChange={(e) => setVercelConfig({ ...vercelConfig, githubToken: e.target.value })}
+                              placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                              className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white focus:border-emerald-500 focus:outline-none"
+                            />
+                            <span className="text-[10px] text-slate-400 mt-0.5 block">
+                              {isAr ? 'رمز GitHub Token مع صلاحية repo' : 'Classic or fine-grained token with repo write scope'}
+                            </span>
+                          </div>
+
+                          <div>
+                            <label className="block text-slate-300 mb-1 font-medium">
+                              {isAr ? 'الفرع الرئيسي (Branch):' : 'Default Branch:'}
+                            </label>
+                            <input
+                              type="text"
+                              value={vercelConfig.branch || 'main'}
+                              onChange={(e) => setVercelConfig({ ...vercelConfig, branch: e.target.value })}
+                              placeholder="main"
+                              className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white focus:border-emerald-500 focus:outline-none"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-slate-300 mb-1 font-medium">
+                              {isAr ? 'رابط Vercel Deploy Hook (اختياري):' : 'Vercel Deploy Hook (Optional):'}
+                            </label>
+                            <input
+                              type="url"
+                              value={vercelConfig.deployHookUrl || ''}
+                              onChange={(e) => setVercelConfig({ ...vercelConfig, deployHookUrl: e.target.value })}
+                              placeholder="https://api.vercel.com/v1/integrations/deploy/..."
+                              className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white focus:border-emerald-500 focus:outline-none"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-2">
+                          <button
+                            type="button"
+                            onClick={() => handleSaveVercelConfig(vercelConfig)}
+                            className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-300 border border-emerald-500/40 font-bold flex items-center gap-1.5 transition cursor-pointer"
+                          >
+                            <Save className="w-3.5 h-3.5" />
+                            <span>{isAr ? 'حفظ إعدادات الاتصال' : 'Save Credentials'}</span>
+                          </button>
+
+                          {vercelConfig.deployHookUrl && (
+                            <button
+                              type="button"
+                              onClick={handleTriggerVercelDeployHook}
+                              disabled={isDeployingVercel}
+                              className="px-4 py-2 rounded-xl bg-cyan-950/60 hover:bg-cyan-900/80 text-cyan-200 border border-cyan-500/40 font-bold flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50"
+                            >
+                              <Play className="w-3.5 h-3.5 text-cyan-400" />
+                              <span>{isAr ? 'تشغيل Deploy Hook' : 'Trigger Deploy Hook'}</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Status & Progress Banner */}
+                    {isDeployingVercel && (
+                      <div className="p-4 rounded-2xl bg-emerald-950/80 border border-emerald-500/50 flex items-center gap-3 animate-fade-in text-xs text-emerald-200">
+                        <Loader2 className="w-5 h-5 text-emerald-400 animate-spin flex-shrink-0" />
+                        <div>
+                          <strong className="block text-white font-bold mb-0.5">
+                            {isAr ? 'جاري رفع ونشر البيانات إلى Vercel...' : 'Deploying data to Vercel...'}
+                          </strong>
+                          <span>{vercelDeployProgress}</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {vercelDeployResult && !isDeployingVercel && (
+                      <div className={`p-4 rounded-2xl border flex items-start gap-3 animate-fade-in text-xs leading-relaxed ${
+                        vercelDeployResult.success 
+                          ? 'bg-emerald-950/60 border-emerald-500/50 text-emerald-200' 
+                          : 'bg-rose-950/60 border-rose-500/50 text-rose-200'
+                      }`}>
+                        {vercelDeployResult.success ? (
+                          <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
+                        ) : (
+                          <AlertCircle className="w-5 h-5 text-rose-400 flex-shrink-0 mt-0.5" />
+                        )}
+                        <div>
+                          <strong className="block text-white font-bold mb-1">
+                            {vercelDeployResult.success 
+                              ? (isAr ? '✅ تمت المزامنة والنشر بنجاح!' : '✅ Deployment Successful!')
+                              : (isAr ? '⚠️ تعذر إكمال الرفع المباشر' : '⚠️ Deployment Failed')}
+                          </strong>
+                          <span>{vercelDeployResult.message}</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* MAIN BIG ACTION BUTTON: DEPLOY TO VERCEL */}
+                    <div className="pt-2">
+                      <button
+                        type="button"
+                        onClick={handleDeployToVercelDirect}
+                        disabled={isDeployingVercel}
+                        className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:brightness-110 text-slate-950 font-extrabold text-sm sm:text-base flex items-center justify-center gap-2.5 transition cursor-pointer shadow-xl shadow-emerald-950/60 disabled:opacity-50"
+                      >
+                        {isDeployingVercel ? (
+                          <>
+                            <Loader2 className="w-5 h-5 animate-spin text-slate-950" />
+                            <span>{isAr ? 'جاري الرفع والنشر على Vercel...' : 'Deploying to Vercel...'}</span>
+                          </>
+                        ) : (
+                          <>
+                            <Rocket className="w-5 h-5 text-slate-950" />
+                            <span>{isAr ? '🚀 رفع وتحديث كافة البيانات على Vercel الآن' : '🚀 Deploy All Site Data to Vercel Now'}</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 2. MANUAL REPO UPDATE OPTIONS */}
                   <div className="p-6 rounded-2xl bg-gradient-to-br from-amber-950/40 via-slate-900 to-slate-900 border border-[#c5a869]/50 space-y-4 shadow-xl">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2.5">
@@ -5006,38 +5276,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
                         </div>
                         <div>
                           <h4 className="font-bold text-white text-sm">
-                            {isAr ? 'حفظ البيانات في الموقع المرفوع على Vercel' : 'Persist Data on Deployed Vercel Site'}
+                            {isAr ? 'طرق بديلة: تنزيل ملفات الكود المصدري للمشروع' : 'Manual Alternative: Download Source Data Files'}
                           </h4>
                           <span className="text-[11px] text-[#e5cb8e] font-medium">
-                            {isAr ? 'طريقتان سهلتان لضمان بقاء بياناتك وظهورها لجميع الزوار' : 'Two easy methods to ensure your data appears for all visitors'}
+                            {isAr ? 'تنزيل ملف البيانات واستبداله في مشروعك يدوياً' : 'Download and replace in your project codebase'}
                           </span>
                         </div>
                       </div>
                       <span className="text-[10px] px-2.5 py-1 rounded-full bg-[#c5a869]/20 text-[#e5cb8e] border border-[#c5a869]/40 font-semibold flex items-center gap-1">
                         <HardDrive className="w-3 h-3 text-[#c5a869]" />
-                        <span>{isAr ? 'تخزين دائم مزدوج' : 'Dual Storage'}</span>
+                        <span>{isAr ? 'ملفات جاهزة' : 'Ready Files'}</span>
                       </span>
                     </div>
 
-                    <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 space-y-3 text-xs text-slate-300 leading-relaxed">
-                      <div className="flex items-start gap-2">
-                        <span className="w-5 h-5 rounded-full bg-[#c5a869] text-slate-950 font-bold text-[11px] flex items-center justify-center flex-shrink-0 mt-0.5">1</span>
-                        <div>
-                          <strong className="text-white block mb-0.5">{isAr ? 'الاستيراد المباشر على رابط Vercel:' : 'Direct Import on Vercel URL:'}</strong>
-                          <span>{isAr ? 'افتح لوحة التحكم في موقعك المرفوع على Vercel، ثم اضغط زر «استيراد وحفظ النسخة الاحتياطية» بالأسفل واختر ملف JSON الخاص بك؛ سيتم حفظ وتثبيت كافة بياناتك فوراً في ذاكرة التخزين الدائم (LocalStorage + IndexedDB).' : 'Open the dashboard on your deployed Vercel URL, click "Import & Save Backup" below and select your JSON file. It will be permanently stored in LocalStorage and IndexedDB.'}</span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-start gap-2 pt-2 border-t border-slate-800/80">
-                        <span className="w-5 h-5 rounded-full bg-[#c5a869] text-slate-950 font-bold text-[11px] flex items-center justify-center flex-shrink-0 mt-0.5">2</span>
-                        <div>
-                          <strong className="text-white block mb-0.5">{isAr ? 'تضمين البيانات في كود المشروع (لتظهر تلقائياً لجميع الزوار بدون استيراد):' : 'Bake Data into Project Source (Shows for all visitors automatically):'}</strong>
-                          <span>{isAr ? 'قم بتنزيل ملف initialData.ts الجديد المحدث من الزر بالأسفل واستبدل به الملف الموجود في مسار src/data/initialData.ts بمجلد مشروعك قبل الرفع على GitHub/Vercel، وسيصبح موقعك يعرض بياناتك فوراً لكل زائر في العالم.' : 'Download the updated initialData.ts file below and replace src/data/initialData.ts before pushing to GitHub/Vercel to make it the universal default for all visitors.'}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Action buttons for Vercel Source Data */}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
                       <button
                         type="button"
@@ -5045,7 +5296,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
                         className="p-3 rounded-xl bg-gradient-to-r from-[#d4af37] via-[#c5a869] to-[#aa8022] hover:brightness-110 text-slate-950 font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer shadow-md"
                       >
                         <FileCode className="w-4 h-4 text-slate-950" />
-                        <span>{isAr ? 'تنزيل ملف initialData.ts' : 'Download initialData.ts'}</span>
+                        <span>{isAr ? 'تنزيل initialData.ts' : 'Download initialData.ts'}</span>
                       </button>
 
                       <button
@@ -5069,7 +5320,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
                     </div>
                   </div>
 
-                  {/* 2. IMPORT & RESTORE BACKUP (JSON) */}
+                  {/* 3. IMPORT & RESTORE BACKUP (JSON) */}
                   <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
                     <div className="flex items-center gap-2.5">
                       <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">

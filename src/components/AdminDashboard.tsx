@@ -160,6 +160,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
   const [tempEducationItem, setTempEducationItem] = useState('');
   const [tempServiceItem, setTempServiceItem] = useState('');
   const [tempTagItem, setTempTagItem] = useState('');
+  const [copiedTS, setCopiedTS] = useState(false);
 
   // Feedback Notification
   const [feedback, setFeedback] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
@@ -328,8 +329,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
     showToast(isAr ? '💾 تم حفظ وتحديث نصوص «عن المكتب والمسيرة» فوراً على الموقع!' : 'About & Journey content saved successfully!');
   };
 
-  if (!isOpen) return null;
-
   // Handle Login
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -482,8 +481,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
   };
 
   // ---------------- BACKUP EXPORT & IMPORT & VERCEL PERSISTENCE ----------------
-  const [copiedTS, setCopiedTS] = useState(false);
-
   const handleExportBackup = () => {
     const jsonStr = storageService.exportDataJSON();
     const blob = new Blob([jsonStr], { type: 'application/json' });
@@ -558,18 +555,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
   };
 
   // Filter messages
-  const filteredMessages = messages.filter((msg) => {
+  const filteredMessages = (messages || []).filter((msg) => {
+    if (!msg) return false;
     const matchSearch = messageSearch === '' || 
-      msg.fullName.toLowerCase().includes(messageSearch.toLowerCase()) ||
-      msg.email.toLowerCase().includes(messageSearch.toLowerCase()) ||
+      (msg.fullName && msg.fullName.toLowerCase().includes(messageSearch.toLowerCase())) ||
+      (msg.email && msg.email.toLowerCase().includes(messageSearch.toLowerCase())) ||
       (msg.company && msg.company.toLowerCase().includes(messageSearch.toLowerCase())) ||
-      msg.consultationType.toLowerCase().includes(messageSearch.toLowerCase());
+      (msg.consultationType && msg.consultationType.toLowerCase().includes(messageSearch.toLowerCase()));
     
     const matchStatus = messageStatusFilter === 'all' || msg.status === messageStatusFilter;
     const matchUrgent = !onlyUrgentMessages || msg.isUrgent;
 
     return matchSearch && matchStatus && matchUrgent;
   });
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/90 backdrop-blur-md animate-fade-in">

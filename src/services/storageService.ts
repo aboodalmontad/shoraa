@@ -106,7 +106,7 @@ const mirrorAllDataToPersistence = () => {
 };
 
 export const storageService = {
-  // Init and seed if empty, with IndexedDB recovery safeguard
+  // Init and seed if empty, with IndexedDB recovery safeguard and site_data.json auto-detection
   init: () => {
     if (typeof window === 'undefined') return;
 
@@ -128,16 +128,58 @@ export const storageService = {
           notifyChange();
           return;
         }
-        // If not in IDB either, seed with initialData
-        storageService.seedInitialData();
+        // If not in IDB either, check if public/site_data.json exists, otherwise seed initialData
+        storageService.checkBundledDataAndSeed();
       }).catch(() => {
-        storageService.seedInitialData();
+        storageService.checkBundledDataAndSeed();
       });
       return;
     }
 
     storageService.seedInitialData();
     mirrorAllDataToPersistence();
+    storageService.checkBundledData();
+  },
+
+  checkBundledData: () => {
+    if (typeof window === 'undefined' || typeof fetch === 'undefined') return;
+    fetch('/site_data.json')
+      .then(res => (res.ok ? res.json() : null))
+      .then(data => {
+        if (data && typeof data === 'object' && (data.partners || data.settings)) {
+          const storedVersion = localStorage.getItem('aladl_site_data_bundled_version');
+          if (data.exportedAt && data.exportedAt !== storedVersion) {
+            storageService.importDataJSON(JSON.stringify(data));
+            localStorage.setItem('aladl_site_data_bundled_version', data.exportedAt);
+            notifyChange();
+          }
+        }
+      })
+      .catch(() => {});
+  },
+
+  checkBundledDataAndSeed: () => {
+    if (typeof window === 'undefined') return;
+    if (typeof fetch !== 'undefined') {
+      fetch('/site_data.json')
+        .then(res => (res.ok ? res.json() : null))
+        .then(data => {
+          if (data && typeof data === 'object' && (data.partners || data.settings)) {
+            storageService.importDataJSON(JSON.stringify(data));
+            if (data.exportedAt) {
+              localStorage.setItem('aladl_site_data_bundled_version', data.exportedAt);
+            }
+            notifyChange();
+          } else {
+            storageService.seedInitialData();
+          }
+        })
+        .catch(() => {
+          storageService.seedInitialData();
+        });
+    } else {
+      storageService.seedInitialData();
+    }
   },
 
   seedInitialData: () => {
@@ -563,24 +605,111 @@ export const storageService = {
   },
 
   // Import full JSON Backup
-  importDataJSON: (jsonStr: string): boolean => {
+  importDataJSON: (jsonStr: string): { success: boolean; counts?: Record<string, number>; message?: string } => {
     try {
       const data = JSON.parse(jsonStr);
-      if (data.partners) localStorage.setItem(STORAGE_KEYS.PARTNERS, JSON.stringify(data.partners));
-      if (data.practiceAreas) localStorage.setItem(STORAGE_KEYS.PRACTICE_AREAS, JSON.stringify(data.practiceAreas));
-      if (data.caseStudies) localStorage.setItem(STORAGE_KEYS.CASE_STUDIES, JSON.stringify(data.caseStudies));
-      if (data.testimonials) localStorage.setItem(STORAGE_KEYS.TESTIMONIALS, JSON.stringify(data.testimonials));
-      if (data.blogPosts) localStorage.setItem(STORAGE_KEYS.BLOG_POSTS, JSON.stringify(data.blogPosts));
-      if (data.messages) localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(data.messages));
-      if (data.settings) localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(data.settings));
-      if (data.offices) localStorage.setItem(STORAGE_KEYS.OFFICES, JSON.stringify(data.offices));
+      let countPartners = 0;
+      let countPractices = 0;
+      let countArticles = 0;
+
+      if (data.partners && Array.isArray(data.partners)) {
+        localStorage.setItem(STORAGE_KEYS.PARTNERS, JSON.stringify(data.partners));
+        countPartners = data.partners.length;
+      }
+      if (data.practiceAreas && Array.isArray(data.practiceAreas)) {
+        localStorage.setItem(STORAGE_KEYS.PRACTICE_AREAS, JSON.stringify(data.practiceAreas));
+        countPractices = data.practiceAreas.length;
+      }
+      if (data.caseStudies && Array.isArray(data.caseStudies)) {
+        localStorage.setItem(STORAGE_KEYS.CASE_STUDIES, JSON.stringify(data.caseStudies));
+      }
+      if (data.testimonials && Array.isArray(data.testimonials)) {
+        localStorage.setItem(STORAGE_KEYS.TESTIMONIALS, JSON.stringify(data.testimonials));
+      }
+      if (data.blogPosts && Array.isArray(data.blogPosts)) {
+        localStorage.setItem(STORAGE_KEYS.BLOG_POSTS, JSON.stringify(data.blogPosts));
+        countArticles = data.blogPosts.length;
+      }
+      if (data.messages && Array.isArray(data.messages)) {
+        localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(data.messages));
+      }
+      if (data.settings && typeof data.settings === 'object') {
+        localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(data.settings));
+      }
+      if (data.offices && Array.isArray(data.offices)) {
+        localStorage.setItem(STORAGE_KEYS.OFFICES, JSON.stringify(data.offices));
+      }
+
       mirrorAllDataToPersistence();
+      storageService.logAction('CREATE', 'النسخ الاحتياطي (Backup)', 'import-json', `استيراد وحفظ نسخة احتياطية على الموقع (${countPartners} شركاء، ${countPractices} اختصاصات)`);
       notifyChange();
-      return true;
+      return {
+        success: true,
+        counts: {
+          partners: countPartners,
+          practiceAreas: countPractices,
+          blogPosts: countArticles,
+        }
+      };
     } catch (e) {
       console.error('Failed to parse JSON backup', e);
-      return false;
+      return { success: false, message: (e as Error).message };
     }
+  },
+
+  // Generate valid TypeScript code for src/data/initialData.ts
+  generateInitialDataTS: (): string => {
+    const settings = storageService.getSettings();
+    const partners = storageService.getPartners();
+    const practiceAreas = storageService.getPracticeAreas();
+    const testimonials = storageService.getTestimonials();
+    const blogPosts = storageService.getBlogPosts();
+    const caseStudies = storageService.getCaseStudies();
+    const offices = storageService.getOffices();
+    const messages = storageService.getMessages();
+
+    return `import { Partner, PracticeArea, Testimonial, BlogPost, CaseStudy, SiteSettings, OfficeLocation, ContactMessage } from '../types';
+
+export const initialSiteSettings: SiteSettings = ${JSON.stringify(settings, null, 2)};
+
+export const initialPartners: Partner[] = ${JSON.stringify(partners, null, 2)};
+
+export const initialPracticeAreas: PracticeArea[] = ${JSON.stringify(practiceAreas, null, 2)};
+
+export const initialTestimonials: Testimonial[] = ${JSON.stringify(testimonials, null, 2)};
+
+export const initialBlogPosts: BlogPost[] = ${JSON.stringify(blogPosts, null, 2)};
+
+export const initialCaseStudies: CaseStudy[] = ${JSON.stringify(caseStudies, null, 2)};
+
+export const initialOffices: OfficeLocation[] = ${JSON.stringify(offices, null, 2)};
+
+export const initialContactMessages: ContactMessage[] = ${JSON.stringify(messages, null, 2)};
+`;
+  },
+
+  // Download initialData.ts directly
+  downloadInitialDataTS: () => {
+    const tsCode = storageService.generateInitialDataTS();
+    const blob = new Blob([tsCode], { type: 'text/typescript;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'initialData.ts';
+    a.click();
+    URL.revokeObjectURL(url);
+  },
+
+  // Download site_data.json directly for public folder
+  downloadSiteDataJSON: () => {
+    const jsonStr = storageService.exportDataJSON();
+    const blob = new Blob([jsonStr], { type: 'application/json;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'site_data.json';
+    a.click();
+    URL.revokeObjectURL(url);
   },
 
   // Reset to initial Seed Data (explicit manual action only)

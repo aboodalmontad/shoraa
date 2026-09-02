@@ -6,7 +6,8 @@ import {
   Trophy, Building, Search, Filter, Key, ExternalLink, Sparkles, Image as ImageIcon,
   UserCheck, Briefcase, UserPlus, GraduationCap, Building2, Gavel, Landmark, Globe, Layers, Tag,
   Layout, Sliders, Type, AlignCenter, AlignRight, Maximize2, Move, MapPin,
-  Languages, Wand2, ArrowRightLeft, Loader2, Target, Compass, Award, History, FileText
+  Languages, Wand2, ArrowRightLeft, Loader2, Target, Compass, Award, History, FileText,
+  Copy, Code2, HardDrive, Cloud, FileCode
 } from 'lucide-react';
 import { storageService } from '../services/storageService';
 import { Partner, PracticeArea, Testimonial, BlogPost, CaseStudy, ContactMessage, SiteSettings, OfficeLocation, Language } from '../types';
@@ -480,7 +481,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
     showToast(isAr ? 'تم حفظ وتطبيق كافة إعدادات الموقع ونصوصه ومزامنة اللغات بنجاح' : 'Site settings updated in all languages');
   };
 
-  // ---------------- BACKUP EXPORT & IMPORT ----------------
+  // ---------------- BACKUP EXPORT & IMPORT & VERCEL PERSISTENCE ----------------
+  const [copiedTS, setCopiedTS] = useState(false);
+
   const handleExportBackup = () => {
     const jsonStr = storageService.exportDataJSON();
     const blob = new Blob([jsonStr], { type: 'application/json' });
@@ -489,6 +492,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
     a.href = url;
     a.download = `aladl_lawfirm_backup_${new Date().toISOString().split('T')[0]}.json`;
     a.click();
+    URL.revokeObjectURL(url);
     showToast(isAr ? 'تم تنزيل النسخة الاحتياطية بنجاح' : 'Backup downloaded');
   };
 
@@ -498,15 +502,40 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
     const reader = new FileReader();
     reader.onload = (event) => {
       const content = event.target?.result as string;
-      const ok = storageService.importDataJSON(content);
-      if (ok) {
+      const res = storageService.importDataJSON(content);
+      if (res && res.success) {
         loadData();
-        showToast(isAr ? 'تم استعادة البيانات بنجاح' : 'Data imported successfully');
+        showToast(
+          isAr 
+            ? '✅ تم استيراد وحفظ كافة البيانات بنجاح وبشكل دائم على الموقع!' 
+            : '✅ Data imported & permanently saved!'
+        );
       } else {
         showToast(isAr ? 'فشل استيراد الملف، تأكد من صحة التنسيق' : 'Invalid file format', 'error');
       }
+      e.target.value = '';
     };
     reader.readAsText(file);
+  };
+
+  const handleDownloadInitialDataTS = () => {
+    storageService.downloadInitialDataTS();
+    showToast(isAr ? 'تم تنزيل ملف initialData.ts المتضمن لكافة بياناتك بنجاح' : 'Downloaded initialData.ts');
+  };
+
+  const handleCopyInitialDataTS = () => {
+    const code = storageService.generateInitialDataTS();
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(code);
+      setCopiedTS(true);
+      showToast(isAr ? 'تم نسخ شفرة البيانات (initialData.ts) إلى الحافظة' : 'Copied code to clipboard');
+      setTimeout(() => setCopiedTS(false), 3000);
+    }
+  };
+
+  const handleDownloadSiteDataJSON = () => {
+    storageService.downloadSiteDataJSON();
+    showToast(isAr ? 'تم تنزيل ملف site_data.json لمجلد public' : 'Downloaded site_data.json');
   };
 
   const handleResetDefaults = () => {
@@ -4956,19 +4985,138 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
                 </form>
               )}
 
-              {/* TAB 9: BACKUP & DATA RESTORE */}
+              {/* TAB 9: BACKUP & DATA RESTORE & VERCEL DEPLOYMENT */}
               {activeTab === 'backup' && (
-                <div className="space-y-6 max-w-2xl">
+                <div className="space-y-6 max-w-3xl">
                   <div>
                     <h3 className="text-xl font-bold font-serif-title text-white">
-                      {isAr ? 'النسخ الاحتياطي وإدارة الذاكرة المؤقتة' : 'Backup & Cache Management'}
+                      {isAr ? 'النسخ الاحتياطي وحفظ البيانات على Vercel' : 'Backup & Vercel Data Persistence'}
                     </h3>
                     <p className="text-xs text-slate-400">
-                      {isAr ? 'تصدير نسخة كاملة، مسح الكاش وتحديث التطبيق مع الحفاظ الكامل على البيانات، أو استعادة النسخ' : 'Export data, safely clear cache & update app while preserving data, or restore backups'}
+                      {isAr ? 'استيراد وحفظ البيانات على الموقع المرفوع، تصدير ملفات البيانات المصدرية، ومسح الذاكرة المؤقتة' : 'Import and persist data on deployed Vercel site, export source initial data, and manage cache'}
                     </p>
                   </div>
 
-                  {/* 1. SAFE CACHE CLEAR & APP UPDATE */}
+                  {/* 1. VERCEL DEPLOYMENT GUIDE & DIRECT IMPORT/RESTORE */}
+                  <div className="p-6 rounded-2xl bg-gradient-to-br from-amber-950/40 via-slate-900 to-slate-900 border border-[#c5a869]/50 space-y-4 shadow-xl">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-10 h-10 rounded-xl bg-[#c5a869]/20 border border-[#c5a869]/40 flex items-center justify-center text-[#c5a869]">
+                          <Cloud className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-white text-sm">
+                            {isAr ? 'حفظ البيانات في الموقع المرفوع على Vercel' : 'Persist Data on Deployed Vercel Site'}
+                          </h4>
+                          <span className="text-[11px] text-[#e5cb8e] font-medium">
+                            {isAr ? 'طريقتان سهلتان لضمان بقاء بياناتك وظهورها لجميع الزوار' : 'Two easy methods to ensure your data appears for all visitors'}
+                          </span>
+                        </div>
+                      </div>
+                      <span className="text-[10px] px-2.5 py-1 rounded-full bg-[#c5a869]/20 text-[#e5cb8e] border border-[#c5a869]/40 font-semibold flex items-center gap-1">
+                        <HardDrive className="w-3 h-3 text-[#c5a869]" />
+                        <span>{isAr ? 'تخزين دائم مزدوج' : 'Dual Storage'}</span>
+                      </span>
+                    </div>
+
+                    <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 space-y-3 text-xs text-slate-300 leading-relaxed">
+                      <div className="flex items-start gap-2">
+                        <span className="w-5 h-5 rounded-full bg-[#c5a869] text-slate-950 font-bold text-[11px] flex items-center justify-center flex-shrink-0 mt-0.5">1</span>
+                        <div>
+                          <strong className="text-white block mb-0.5">{isAr ? 'الاستيراد المباشر على رابط Vercel:' : 'Direct Import on Vercel URL:'}</strong>
+                          <span>{isAr ? 'افتح لوحة التحكم في موقعك المرفوع على Vercel، ثم اضغط زر «استيراد وحفظ النسخة الاحتياطية» بالأسفل واختر ملف JSON الخاص بك؛ سيتم حفظ وتثبيت كافة بياناتك فوراً في ذاكرة التخزين الدائم (LocalStorage + IndexedDB).' : 'Open the dashboard on your deployed Vercel URL, click "Import & Save Backup" below and select your JSON file. It will be permanently stored in LocalStorage and IndexedDB.'}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-2 pt-2 border-t border-slate-800/80">
+                        <span className="w-5 h-5 rounded-full bg-[#c5a869] text-slate-950 font-bold text-[11px] flex items-center justify-center flex-shrink-0 mt-0.5">2</span>
+                        <div>
+                          <strong className="text-white block mb-0.5">{isAr ? 'تضمين البيانات في كود المشروع (لتظهر تلقائياً لجميع الزوار بدون استيراد):' : 'Bake Data into Project Source (Shows for all visitors automatically):'}</strong>
+                          <span>{isAr ? 'قم بتنزيل ملف initialData.ts الجديد المحدث من الزر بالأسفل واستبدل به الملف الموجود في مسار src/data/initialData.ts بمجلد مشروعك قبل الرفع على GitHub/Vercel، وسيصبح موقعك يعرض بياناتك فوراً لكل زائر في العالم.' : 'Download the updated initialData.ts file below and replace src/data/initialData.ts before pushing to GitHub/Vercel to make it the universal default for all visitors.'}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Action buttons for Vercel Source Data */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+                      <button
+                        type="button"
+                        onClick={handleDownloadInitialDataTS}
+                        className="p-3 rounded-xl bg-gradient-to-r from-[#d4af37] via-[#c5a869] to-[#aa8022] hover:brightness-110 text-slate-950 font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer shadow-md"
+                      >
+                        <FileCode className="w-4 h-4 text-slate-950" />
+                        <span>{isAr ? 'تنزيل ملف initialData.ts' : 'Download initialData.ts'}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleCopyInitialDataTS}
+                        className="p-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold text-xs flex items-center justify-center gap-2 transition cursor-pointer"
+                      >
+                        {copiedTS ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4 text-[#c5a869]" />}
+                        <span>{copiedTS ? (isAr ? 'تم النسخ بنجاح!' : 'Copied!') : (isAr ? 'نسخ كود TypeScript' : 'Copy TS Code')}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleDownloadSiteDataJSON}
+                        className="p-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold text-xs flex items-center justify-center gap-2 transition cursor-pointer"
+                        title={isAr ? 'تنزيل ملف site_data.json لوضعه داخل مجلد public في المشروع' : 'Download site_data.json for public folder'}
+                      >
+                        <Download className="w-4 h-4 text-cyan-400" />
+                        <span>{isAr ? 'تنزيل site_data.json لمجلد public' : 'Download site_data.json'}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 2. IMPORT & RESTORE BACKUP (JSON) */}
+                  <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
+                        <Upload className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-white text-sm">{isAr ? 'استيراد وحفظ النسخة الاحتياطية (Import JSON)' : 'Import & Save JSON Backup'}</h4>
+                        <span className="text-[11px] text-slate-400">{isAr ? 'استعادة وتثبيت كامل بيانات الشركاء والاختصاصات والمقالات والإعدادات في المتصفح' : 'Restore & permanently save all partners, practices, articles and settings'}</span>
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-slate-300">
+                      {isAr ? 'اختر ملف النسخة الاحتياطية (JSON) الذي قمت بتنزيله سابقاً؛ سيتم حفظه فورياً وتحديث كافة عناصر الموقع.' : 'Select a previously exported JSON backup file to restore and persist all data on this domain.'}
+                    </p>
+
+                    <label className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-600 hover:brightness-110 text-slate-950 text-xs font-bold cursor-pointer transition shadow-lg shadow-emerald-900/30">
+                      <Upload className="w-4 h-4 text-slate-950" />
+                      <span>{isAr ? 'اختيار ملف JSON واستعادة البيانات فوراً' : 'Select JSON File & Restore Data'}</span>
+                      <input type="file" accept=".json" onChange={handleImportBackup} className="hidden" />
+                    </label>
+                  </div>
+
+                  {/* 3. EXPORT BACKUP (JSON) */}
+                  <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-9 h-9 rounded-xl bg-[#c5a869]/20 border border-[#c5a869]/40 flex items-center justify-center text-[#c5a869]">
+                        <Download className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-white text-sm">{isAr ? 'تصدير نسخة احتياطية كاملة (Export JSON)' : 'Export Full JSON Backup'}</h4>
+                        <span className="text-[11px] text-slate-400">{isAr ? 'حفظ لقطة كاملة لجميع البيانات للاحتفاظ بها أو نقلها لأي موقع أو جهاز آخر' : 'Download a full snapshot of all data to transfer or backup safely'}</span>
+                      </div>
+                    </div>
+                    <p className="text-xs text-slate-300">
+                      {isAr ? 'تنزيل ملف JSON يحتوي على كافة بيانات الشركاء، الاختصاصات، الإنجازات، المقالات، رسائل العملاء، وإعدادات الهوية.' : 'Download a JSON snapshot containing all partners, practices, case studies, blogs, and settings.'}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleExportBackup}
+                      className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-[#e5cb8e] border border-[#c5a869]/30 text-xs font-semibold flex items-center gap-2 transition cursor-pointer"
+                    >
+                      <Download className="w-4 h-4 text-[#c5a869]" />
+                      <span>{isAr ? 'تنزيل ملف النسخة الاحتياطية (JSON)' : 'Download Backup File (.json)'}</span>
+                    </button>
+                  </div>
+
+                  {/* 4. SAFE CACHE CLEAR & APP UPDATE */}
                   <div className="p-6 rounded-2xl bg-gradient-to-br from-cyan-950/40 via-slate-900 to-slate-900 border border-cyan-500/40 space-y-4 shadow-xl">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2.5">
@@ -5008,6 +5156,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
                     </div>
 
                     <button
+                      type="button"
                       onClick={handleClearCacheAndRefresh}
                       disabled={!!cacheRefreshProgress}
                       className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-cyan-600 via-cyan-500 to-teal-500 hover:brightness-110 text-slate-950 text-xs font-bold flex items-center gap-2 transition cursor-pointer shadow-lg shadow-cyan-900/30"
@@ -5017,38 +5166,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
                     </button>
                   </div>
 
-                  <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
-                    <h4 className="font-bold text-white text-sm">{isAr ? 'تصدير نسخة احتياطية (Export JSON)' : 'Export JSON Backup'}</h4>
-                    <p className="text-xs text-slate-300">
-                      {isAr ? 'حفظ ملف يحتوي على كافة بيانات الشركاء، الاختصاصات، مقالات المدونة، ورسائل العملاء.' : 'Save a complete snapshot of partners, practices, messages and settings.'}
-                    </p>
-                    <button
-                      onClick={handleExportBackup}
-                      className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-[#e5cb8e] border border-[#c5a869]/30 text-xs font-semibold flex items-center gap-2 transition cursor-pointer"
-                    >
-                      <Download className="w-4 h-4 text-[#c5a869]" />
-                      <span>{isAr ? 'تنزيل ملف النسخة الاحتياطية' : 'Download Backup File'}</span>
-                    </button>
-                  </div>
-
-                  <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
-                    <h4 className="font-bold text-white text-sm">{isAr ? 'استيراد نسخة سابقة (Import JSON)' : 'Import JSON Backup'}</h4>
-                    <p className="text-xs text-slate-300">
-                      {isAr ? 'رفع ملف نسخة احتياطية سابقة لاستعادة كامل البيانات.' : 'Restore data from a previously exported JSON backup.'}
-                    </p>
-                    <label className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold cursor-pointer transition">
-                      <Upload className="w-4 h-4 text-[#c5a869]" />
-                      <span>{isAr ? 'اختيار ملف JSON للاستيراد' : 'Select JSON File'}</span>
-                      <input type="file" accept=".json" onChange={handleImportBackup} className="hidden" />
-                    </label>
-                  </div>
-
+                  {/* 5. RESET TO DEFAULTS */}
                   <div className="p-6 rounded-2xl bg-rose-950/20 border border-rose-500/30 space-y-4">
                     <h4 className="font-bold text-rose-300 text-sm">{isAr ? 'إعادة ضبط المصنع (Reset Defaults)' : 'Reset to Defaults'}</h4>
                     <p className="text-xs text-slate-400">
                       {isAr ? 'إعادة كافة البيانات إلى البيانات الأولية المعتمدة للمكتب.' : 'Reset all partners, articles, and settings to original defaults.'}
                     </p>
                     <button
+                      type="button"
                       onClick={handleResetDefaults}
                       className="px-5 py-2.5 rounded-xl bg-rose-900/40 hover:bg-rose-900 text-rose-200 border border-rose-500/40 text-xs font-semibold flex items-center gap-2 transition cursor-pointer"
                     >

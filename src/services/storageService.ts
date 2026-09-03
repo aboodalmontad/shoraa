@@ -84,7 +84,37 @@ const notifyChange = () => {
   }
 };
 
-// Auto-sync current state to secondary persistence
+// Auto-sync current state to secondary persistence and server cloud
+let serverSyncTimeout: any = null;
+
+const pushSnapshotToServer = async (snapshot: Record<string, any>) => {
+  if (typeof fetch === 'undefined') return;
+  try {
+    const res = await fetch('/api/site-data', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(snapshot),
+    });
+    if (res.ok) {
+      const resJson = await res.json();
+      const version = resJson.exportedAt || snapshot.savedAt;
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('aladl_site_data_bundled_version', version);
+        window.dispatchEvent(new CustomEvent('aladl_cloud_synced', { 
+          detail: { success: true, timestamp: version } 
+        }));
+      }
+      return { success: true, version };
+    }
+  } catch (e) {
+    // Non-blocking in case running purely client-side
+    console.warn('Background server sync notice:', e);
+  }
+  return { success: false };
+};
+
 const mirrorAllDataToPersistence = () => {
   if (typeof window === 'undefined') return;
   try {
@@ -99,7 +129,14 @@ const mirrorAllDataToPersistence = () => {
       offices: storageService.getOffices(),
       savedAt: new Date().toISOString(),
     };
+    // 1. Mirror to local IndexedDB
     saveSnapshotToIDB(snapshot);
+
+    // 2. Debounce push to central server (/api/site-data) so anyone in the world sees the changes
+    if (serverSyncTimeout) clearTimeout(serverSyncTimeout);
+    serverSyncTimeout = setTimeout(() => {
+      pushSnapshotToServer(snapshot);
+    }, 400);
   } catch (e) {
     console.warn('Failed to mirror data snapshot', e);
   }
@@ -128,7 +165,7 @@ export const storageService = {
           notifyChange();
           return;
         }
-        // If not in IDB either, check if public/site_data.json exists, otherwise seed initialData
+        // If not in IDB either, check if server/public data exists, otherwise seed initialData
         storageService.checkBundledDataAndSeed();
       }).catch(() => {
         storageService.checkBundledDataAndSeed();
@@ -143,14 +180,19 @@ export const storageService = {
 
   checkBundledData: () => {
     if (typeof window === 'undefined' || typeof fetch === 'undefined') return;
-    fetch('/site_data.json')
-      .then(res => (res.ok ? res.json() : null))
-      .then(data => {
+    
+    // First try /api/site-data, then fallback to /site_data.json
+    fetch('/api/site-data')
+      .then(res => (res.ok ? res.json() : fetch('/site_data.json').then(r => r.ok ? r.json() : null)))
+      .then(result => {
+        const data = result?.data || result;
         if (data && typeof data === 'object' && (data.partners || data.settings)) {
           const storedVersion = localStorage.getItem('aladl_site_data_bundled_version');
-          if (data.exportedAt && data.exportedAt !== storedVersion) {
+          if (!storedVersion || (data.exportedAt && data.exportedAt !== storedVersion)) {
             storageService.importDataJSON(JSON.stringify(data));
-            localStorage.setItem('aladl_site_data_bundled_version', data.exportedAt);
+            if (data.exportedAt) {
+              localStorage.setItem('aladl_site_data_bundled_version', data.exportedAt);
+            }
             notifyChange();
           }
         }
@@ -161,9 +203,10 @@ export const storageService = {
   checkBundledDataAndSeed: () => {
     if (typeof window === 'undefined') return;
     if (typeof fetch !== 'undefined') {
-      fetch('/site_data.json')
-        .then(res => (res.ok ? res.json() : null))
-        .then(data => {
+      fetch('/api/site-data')
+        .then(res => (res.ok ? res.json() : fetch('/site_data.json').then(r => r.ok ? r.json() : null)))
+        .then(result => {
+          const data = result?.data || result;
           if (data && typeof data === 'object' && (data.partners || data.settings)) {
             storageService.importDataJSON(JSON.stringify(data));
             if (data.exportedAt) {
@@ -179,6 +222,56 @@ export const storageService = {
         });
     } else {
       storageService.seedInitialData();
+    }
+  },
+
+  // Explicit manual upload to central server so all visitors in the world see it immediately
+  publishToCloudServer: async (): Promise<{ success: boolean; message: string; timestamp?: string }> => {
+    try {
+      const snapshot = {
+        partners: storageService.getPartners(),
+        practiceAreas: storageService.getPracticeAreas(),
+        caseStudies: storageService.getCaseStudies(),
+        testimonials: storageService.getTestimonials(),
+        blogPosts: storageService.getBlogPosts(),
+        messages: storageService.getMessages(),
+        settings: storageService.getSettings(),
+        offices: storageService.getOffices(),
+        savedAt: new Date().toISOString(),
+      };
+
+      const res = await fetch('/api/site-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(snapshot),
+      });
+
+      if (res.ok) {
+        const json = await res.json();
+        const ts = json.exportedAt || snapshot.savedAt;
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('aladl_site_data_bundled_version', ts);
+          window.dispatchEvent(new CustomEvent('aladl_cloud_synced', {
+            detail: { success: true, timestamp: ts }
+          }));
+        }
+        return {
+          success: true,
+          message: 'تم حفظ ونشر كافة التعديلات على الخادم العام بنجاح! تظهر الآن فوراً لجميع الزوار حول العالم.',
+          timestamp: ts,
+        };
+      } else {
+        const errJson = await res.json().catch(() => ({}));
+        return {
+          success: false,
+          message: errJson.error || 'فشل الخادم في معالجة طلب حفظ البيانات',
+        };
+      }
+    } catch (err: any) {
+      return {
+        success: false,
+        message: err.message || 'حدث خطأ في الاتصال بالخادم السحابي',
+      };
     }
   },
 

@@ -2,5 +2,5 @@
   "name": "العدل والريادة للمحاماة والاستشارات القانونية | Al-Adl Law Firm",
   "description": "منصة وهبوط مكتب محاماة واستشارات قانونية عالمي متكامل، يضم الاختصاصات، الشركاء، حجز الاستشارات، استعراض القضايا والإنجازات، ولوحة تحكم إدارية متكاملة.",
   "requestFramePermissions": [],
-  "majorCapabilities": []
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

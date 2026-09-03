@@ -170,6 +170,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
   const [vercelDeployResult, setVercelDeployResult] = useState<{ success: boolean; message: string } | null>(null);
   const [showVercelConfigDetails, setShowVercelConfigDetails] = useState(false);
 
+  // Global Cloud Server Live Sync States
+  const [isCloudPublishing, setIsCloudPublishing] = useState(false);
+  const [cloudPublishResult, setCloudPublishResult] = useState<{ success: boolean; message: string; timestamp?: string } | null>(null);
+  const [lastCloudSyncTime, setLastCloudSyncTime] = useState<string | null>(() => {
+    return typeof window !== 'undefined' ? localStorage.getItem('aladl_site_data_bundled_version') : null;
+  });
+
   // Feedback Notification
   const [feedback, setFeedback] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
 
@@ -192,8 +199,45 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
   useEffect(() => {
     if (isOpen) {
       loadData();
+      const savedVersion = localStorage.getItem('aladl_site_data_bundled_version');
+      if (savedVersion) setLastCloudSyncTime(savedVersion);
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    const handleCloudSyncEvent = (e: any) => {
+      if (e.detail?.timestamp) {
+        setLastCloudSyncTime(e.detail.timestamp);
+      }
+    };
+    window.addEventListener('aladl_cloud_synced', handleCloudSyncEvent);
+    return () => window.removeEventListener('aladl_cloud_synced', handleCloudSyncEvent);
+  }, []);
+
+  // Global Cloud Server 1-Click Publish
+  const handlePublishToCloud = async () => {
+    setIsCloudPublishing(true);
+    setCloudPublishResult(null);
+    try {
+      const res = await storageService.publishToCloudServer();
+      setCloudPublishResult(res);
+      if (res.success) {
+        if (res.timestamp) setLastCloudSyncTime(res.timestamp);
+        showToast(
+          isAr 
+            ? '🚀 تم رفع وحفظ كافة التعديلات على الخادم السحابي العام بنجاح! تظهر الآن لكل زائر حول العالم.'
+            : '🚀 Live site data published globally to all visitors!'
+        );
+      } else {
+        showToast(res.message, 'error');
+      }
+    } catch (e: any) {
+      setCloudPublishResult({ success: false, message: e.message || 'Error' });
+      showToast(isAr ? 'تعذر النشر إلى الخادم' : 'Cloud sync failed', 'error');
+    } finally {
+      setIsCloudPublishing(false);
+    }
+  };
 
   // Master Bulk Translation for the entire site
   const handleBulkAutoTranslateAll = async () => {
@@ -678,6 +722,26 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
                   </span>
                 </button>
               </div>
+            )}
+
+            {isAuthenticated && (
+              <button
+                type="button"
+                onClick={handlePublishToCloud}
+                disabled={isCloudPublishing}
+                className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:brightness-110 text-slate-950 font-extrabold text-xs flex items-center gap-1.5 shadow-md shadow-emerald-950/40 transition cursor-pointer disabled:opacity-50"
+                title={isAr ? 'رفع وحفظ كافة التعديلات على الخادم السحابي العام لتظهر فوراً لجميع الزوار حول العالم' : 'Publish all live data to the central server so it shows for every visitor worldwide'}
+              >
+                {isCloudPublishing ? (
+                  <Loader2 className="w-3.5 h-3.5 text-slate-950 animate-spin" />
+                ) : (
+                  <Globe className="w-3.5 h-3.5 text-slate-950" />
+                )}
+                <span className="hidden sm:inline">
+                  {isCloudPublishing ? (isAr ? 'جاري النشر للعالم...' : 'Publishing...') : (isAr ? 'نشر فوري للعالم كله' : 'Publish to World')}
+                </span>
+                <span className="sm:hidden">{isAr ? 'نشر للعالم' : 'Publish'}</span>
+              </button>
             )}
 
             {isAuthenticated && (
@@ -5070,33 +5134,104 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
                 <div className="space-y-6 max-w-3xl">
                   <div>
                     <h3 className="text-xl font-bold font-serif-title text-white">
-                      {isAr ? 'النسخ الاحتياطي ورفع البيانات إلى Vercel' : 'Backup & Vercel 1-Click Deployment'}
+                      {isAr ? 'نشر البيانات للعالم كله والنسخ الاحتياطي' : 'Global Cloud Deployment & Data Backup'}
                     </h3>
                     <p className="text-xs text-slate-400">
-                      {isAr ? 'رفع ونشر كافة بيانات الشركاء والمقالات والإعدادات إلى موقع Vercel بنقرة واحدة ليراها جميع الزوار' : '1-click deploy all site data directly to Vercel/GitHub so it shows for every visitor worldwide'}
+                      {isAr ? 'رفع وحفظ كافة التعديلات على الخادم السحابي العام لتظهر لجميع الزوار حول العالم فوراً وبشكل دائم' : 'Publish and persist all site changes to the central cloud server for all visitors globally'}
                     </p>
                   </div>
 
-                  {/* 1. PRIMARY: VERCEL 1-CLICK CLOUD DEPLOY */}
-                  <div className="p-6 rounded-3xl bg-gradient-to-br from-emerald-950/60 via-slate-900 to-slate-950 border-2 border-emerald-500/60 shadow-2xl space-y-5 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+                  {/* 1. PRIMARY & DIRECT: GLOBAL CLOUD SERVER DEPLOYMENT */}
+                  <div className="p-6 rounded-3xl bg-gradient-to-br from-[#0c192c] via-[#091322] to-[#040810] border-2 border-[#c5a869] shadow-2xl space-y-5 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-80 h-80 bg-[#c5a869]/10 rounded-full blur-3xl pointer-events-none" />
                     
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-slate-950 shadow-lg shadow-emerald-900/40">
-                          <Rocket className="w-6 h-6 animate-pulse" />
+                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#d4af37] via-[#c5a869] to-[#8d6a1b] flex items-center justify-center text-slate-950 shadow-lg shadow-amber-950/40">
+                          <Globe className="w-6 h-6 animate-pulse text-slate-950" />
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
                             <h4 className="font-bold text-white text-base">
-                              {isAr ? 'رفع ونشر كافة البيانات إلى Vercel بنقرة واحدة' : '1-Click Direct Deploy to Vercel'}
+                              {isAr ? 'الخيار الأول: النشر السحابي المباشر للعالم كله' : 'Primary: Direct Global Cloud Deployment'}
+                            </h4>
+                            <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                              {isAr ? 'الخادم نشط' : 'Server Online'}
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-300">
+                            {isAr 
+                              ? 'يتم حفظ كافة البيانات على الخادم المركزي (/api/site-data) ليراها أي شخص في العالم يفتح رابط الموقع.'
+                              : 'All content is saved directly to the central cloud server (/api/site-data) and delivered to all global visitors.'}
+                          </p>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={handlePublishToCloud}
+                        disabled={isCloudPublishing}
+                        className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:brightness-110 text-slate-950 font-extrabold text-xs flex items-center gap-2 shadow-lg shadow-emerald-950/50 transition cursor-pointer self-start sm:self-auto disabled:opacity-50"
+                      >
+                        {isCloudPublishing ? (
+                          <Loader2 className="w-4 h-4 animate-spin text-slate-950" />
+                        ) : (
+                          <Rocket className="w-4 h-4 text-slate-950" />
+                        )}
+                        <span>{isCloudPublishing ? (isAr ? 'جاري الرفع والنشر...' : 'Publishing...') : (isAr ? 'رفع ونشر التعديلات للعالم الآن' : 'Publish to World Now')}</span>
+                      </button>
+                    </div>
+
+                    {/* Server Sync Status Banner */}
+                    <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 text-slate-300">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                          <span className="font-semibold text-white">{isAr ? 'المزامنة التلقائية نشطة:' : 'Automatic Background Sync:'}</span>
+                          <span className="text-emerald-300">{isAr ? 'تُحفظ أي إضافة أو تعديل تلقائياً على الخادم' : 'Every edit is auto-saved to server'}</span>
+                        </div>
+                        {lastCloudSyncTime && (
+                          <p className="text-[11px] text-slate-400 font-mono">
+                            {isAr ? 'آخر مزامنة ونشر سحابي: ' : 'Last Cloud Sync: '}
+                            <span className="text-[#c5a869] font-bold">{new Date(lastCloudSyncTime).toLocaleString(isAr ? 'ar-SA' : 'en-US')}</span>
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {cloudPublishResult && (
+                      <div className={`p-3.5 rounded-xl text-xs font-semibold flex items-center gap-2 ${
+                        cloudPublishResult.success 
+                          ? 'bg-emerald-950/80 border border-emerald-500/60 text-emerald-200' 
+                          : 'bg-rose-950/80 border border-rose-500/60 text-rose-200'
+                      }`}>
+                        {cloudPublishResult.success ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <AlertCircle className="w-4 h-4 text-rose-400" />}
+                        <span>{cloudPublishResult.message}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 2. SECONDARY: VERCEL & GITHUB DEPLOYMENT */}
+                  <div className="p-6 rounded-3xl bg-gradient-to-br from-emerald-950/40 via-slate-900 to-slate-950 border-2 border-emerald-500/40 shadow-xl space-y-5 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
+                    
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-slate-950 shadow-lg shadow-emerald-900/40">
+                          <Rocket className="w-6 h-6 text-slate-950" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-bold text-white text-base">
+                              {isAr ? 'الخيار الثاني: النشر عبر GitHub و Vercel لموقعك الخارجي' : 'Secondary: Deploy to GitHub & Vercel'}
                             </h4>
                             <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold">
-                              {isAr ? 'نشر سحابي فوري' : 'Live Sync'}
+                              {isAr ? 'مستودع خارجي' : 'External Repo'}
                             </span>
                           </div>
                           <p className="text-xs text-emerald-200/80">
-                            {isAr ? 'يتم رفع ملفات البيانات وتحديث مستودعك تلقائياً ليقوم Vercel بنشرها لجميع زوار موقعك فوراً' : 'Pushes updated data directly to your repo; Vercel automatically builds and displays it to all visitors.'}
+                            {isAr ? 'إذا كنت تستضيف موقعك أيضاً على Vercel عبر مستودع GitHub الخاص بك، يمكنك دفع التعديلات بضغطة زر.' : 'Push updated data to your custom GitHub repository and trigger Vercel deploy hook.'}
                           </p>
                         </div>
                       </div>

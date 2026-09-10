@@ -1,20 +1,54 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# منصة المحاماة والاستشارات القانونية | Law Firm Platform
 
-# Run and deploy your AI Studio app
+منصة متكاملة لمكاتب المحاماة والاستشارات القانونية، مصممة للعرض العام كموقع رسمي مستقل لمكتب المحاماة على استضافة **Vercel**، ومدعومة بقاعدة بيانات سحابية مركزية موحدة على **Supabase**.
 
-This contains everything you need to run your app locally.
+---
 
-View your app in AI Studio: https://ai.studio/apps/0cea4373-e2ac-4d14-bb4b-14dea65fc468
+## خطوات النشر والربط السريع (GitHub &rarr; Vercel)
 
-## Run Locally
+### 1. إعداد المستودع على GitHub (Git Repository)
+عند رفع الكود إلى GitHub:
+* المشروع مهيأ بالكامل ومحدث بملف `vercel.json` لإعادة التوجيه النظيف (Clean SPA Rewrites).
+* لا يتطلب المشروع أي إعدادات معقدة؛ مجرد رفع ملفات المشروع مباشرة.
 
-**Prerequisites:**  Node.js
+### 2. الربط مع Vercel (Import into Vercel)
+1. سجل الدخول إلى حسابك في [Vercel](https://vercel.com).
+2. اضغط على **"Add New..."** ثم اختر **"Project"**.
+3. اختر مستودع المشروع من حسابك على **GitHub** واضغط **Import**.
+4. تأكد من إعدادات البناء (Vercel يكتشفها تلقائياً):
+   * **Framework Preset:** Vite
+   * **Build Command:** `npm run build`
+   * **Output Directory:** `dist`
 
+### 3. إضافة متغيرات البيئة في Vercel (Environment Variables)
+في صفحة استيراد المشروع في Vercel، افتح قسم **Environment Variables** وأضف:
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+| اسم المتغير (Variable Name) | الوصف | مثال على القيمة |
+| :--- | :--- | :--- |
+| `VITE_SUPABASE_URL` | رابط مشروعك في Supabase | `https://xyzcompany.supabase.co` |
+| `VITE_SUPABASE_ANON_KEY` | المفتاح العام لمشروعك في Supabase | `eyJhbGciOiJIUzI1NiIsInR5cCI6...` |
+| `VITE_DEFAULT_FIRM_SLUG` | (اختياري) المكتب الافتراضي المعروض للعامة | `nahwi-law` |
+
+5. اضغط **Deploy**.
+6. سيبدأ البناء وينتهي في أقل من دقيقة، وسيصبح موقعك متاحاً للعالم على رابط Vercel الرسمي مثل: `your-firm.vercel.app`.
+
+---
+
+## معمارية النظام (Architecture Overview)
+* **واجهة واحدة للعالم:** يرى الزائر العادي واجهة مكتب محاماة واحد فقط (المكتب المحدد كافتراضي).
+* **قاعدة بيانات سحابية مركزية واحدة:** جدول واحد في Supabase (`law_firms`) يحتوي على كافة المكاتب، اشتراكاتها، وبياناتها.
+* **لوحة تحكم مدير المنصة:** للتحكم باشتراكات المكاتب، وتفعيل/إيقاف المواقع، وتعيين المكتب المعروض للعالم بضغطة زر. الوصول إليها عبر:
+  * زر **"إدارة المنصة"** في أسفل الفوتر (Footer).
+  * اختصار لوحة المفاتيح: `Ctrl + Shift + S`.
+  * المعامل في الرابط: `?admin=super`.
+
+---
+
+## التشغيل المحلي (Run Locally)
+```bash
+# 1. تثبيت الاعتماديات
+npm install
+
+# 2. تشغيل خادم التطوير
+npm run dev
+```

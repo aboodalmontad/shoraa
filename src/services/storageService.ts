@@ -1,5 +1,7 @@
-import { Partner, PracticeArea, Testimonial, BlogPost, CaseStudy, ContactMessage, SiteSettings, OfficeLocation, AuditLog } from '../types';
+import { Partner, PracticeArea, Testimonial, BlogPost, CaseStudy, ContactMessage, SiteSettings, OfficeLocation, AuditLog, LawFirm } from '../types';
 import { initialPartners, initialPracticeAreas, initialTestimonials, initialBlogPosts, initialCaseStudies, initialContactMessages, initialSiteSettings, initialOffices } from '../data/initialData';
+import { firmService } from './firmService';
+import { getSupabase, getStoredSupabaseConfig, isValidUUID, toValidUUID } from '../lib/supabase';
 
 const STORAGE_KEYS = {
   PARTNERS: 'aladl_partners_v1',
@@ -84,37 +86,7 @@ const notifyChange = () => {
   }
 };
 
-// Auto-sync current state to secondary persistence and server cloud
-let serverSyncTimeout: any = null;
-
-const pushSnapshotToServer = async (snapshot: Record<string, any>) => {
-  if (typeof fetch === 'undefined') return;
-  try {
-    const res = await fetch('/api/site-data', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(snapshot),
-    });
-    if (res.ok) {
-      const resJson = await res.json();
-      const version = resJson.exportedAt || snapshot.savedAt;
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('aladl_site_data_bundled_version', version);
-        window.dispatchEvent(new CustomEvent('aladl_cloud_synced', { 
-          detail: { success: true, timestamp: version } 
-        }));
-      }
-      return { success: true, version };
-    }
-  } catch (e) {
-    // Non-blocking in case running purely client-side
-    console.warn('Background server sync notice:', e);
-  }
-  return { success: false };
-};
-
+// Auto-sync current state to secondary persistence and firmService
 const mirrorAllDataToPersistence = () => {
   if (typeof window === 'undefined') return;
   try {
@@ -129,70 +101,99 @@ const mirrorAllDataToPersistence = () => {
       offices: storageService.getOffices(),
       savedAt: new Date().toISOString(),
     };
-    // 1. Mirror to local IndexedDB
     saveSnapshotToIDB(snapshot);
 
-    // 2. Debounce push to central server (/api/site-data) so anyone in the world sees the changes
-    if (serverSyncTimeout) clearTimeout(serverSyncTimeout);
-    serverSyncTimeout = setTimeout(() => {
-      pushSnapshotToServer(snapshot);
-    }, 400);
+    // Also mirror to active firm inside firmService
+    const activeSlug = firmService.getActiveFirmSlug();
+    const firm = firmService.getFirmBySlug(activeSlug);
+    if (firm) {
+      firm.data = {
+        settings: snapshot.settings,
+        partners: snapshot.partners,
+        practiceAreas: snapshot.practiceAreas,
+        caseStudies: snapshot.caseStudies,
+        testimonials: snapshot.testimonials,
+        blogPosts: snapshot.blogPosts,
+        offices: snapshot.offices,
+        messages: snapshot.messages,
+        savedAt: snapshot.savedAt,
+      };
+      firm.nameAr = snapshot.settings.firmNameAr || firm.nameAr;
+      firm.nameEn = snapshot.settings.firmNameEn || firm.nameEn;
+      firm.phone = snapshot.settings.phone || firm.phone;
+      firm.email = snapshot.settings.email || firm.email;
+      firm.themeColor = snapshot.settings.primaryColor || firm.themeColor || '#c5a869';
+      firmService.saveFirm(firm).catch(() => {});
+    }
   } catch (e) {
     console.warn('Failed to mirror data snapshot', e);
   }
 };
 
 export const storageService = {
-  // Init and seed if empty, with IndexedDB recovery safeguard and site_data.json auto-detection
+  // Init and seed if empty, with Multi-firm resolution
   init: () => {
     if (typeof window === 'undefined') return;
+
+    firmService.init().then(() => {
+      const activeSlug = firmService.getActiveFirmSlug();
+      const currentFirm = firmService.getFirmBySlug(activeSlug);
+
+      if (currentFirm && currentFirm.data && (currentFirm.data.partners || currentFirm.data.settings)) {
+        storageService.loadFirm(currentFirm.slug, false);
+      } else {
+        storageService.seedInitialData();
+        mirrorAllDataToPersistence();
+      }
+    });
 
     const hasPartners = !!localStorage.getItem(STORAGE_KEYS.PARTNERS);
     const hasSettings = !!localStorage.getItem(STORAGE_KEYS.SETTINGS);
 
-    // If localStorage was cleared (e.g. browser cache clear), try restoring from IndexedDB first
     if (!hasPartners && !hasSettings) {
-      getSnapshotFromIDB().then((backup) => {
-        if (backup && typeof backup === 'object') {
-          if (backup.partners) localStorage.setItem(STORAGE_KEYS.PARTNERS, JSON.stringify(backup.partners));
-          if (backup.practiceAreas) localStorage.setItem(STORAGE_KEYS.PRACTICE_AREAS, JSON.stringify(backup.practiceAreas));
-          if (backup.caseStudies) localStorage.setItem(STORAGE_KEYS.CASE_STUDIES, JSON.stringify(backup.caseStudies));
-          if (backup.testimonials) localStorage.setItem(STORAGE_KEYS.TESTIMONIALS, JSON.stringify(backup.testimonials));
-          if (backup.blogPosts) localStorage.setItem(STORAGE_KEYS.BLOG_POSTS, JSON.stringify(backup.blogPosts));
-          if (backup.messages) localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(backup.messages));
-          if (backup.settings) localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(backup.settings));
-          if (backup.offices) localStorage.setItem(STORAGE_KEYS.OFFICES, JSON.stringify(backup.offices));
-          notifyChange();
-          return;
-        }
-        // If not in IDB either, check if server/public data exists, otherwise seed initialData
-        storageService.checkBundledDataAndSeed();
-      }).catch(() => {
-        storageService.checkBundledDataAndSeed();
-      });
-      return;
+      storageService.seedInitialData();
     }
+  },
 
-    storageService.seedInitialData();
-    mirrorAllDataToPersistence();
-    storageService.checkBundledData();
+  // Load a specific Law Firm's complete data into active state
+  loadFirm: (slug: string, triggerEvent = true) => {
+    if (typeof window === 'undefined') return;
+    const firm = firmService.getFirmBySlug(slug);
+    if (!firm || !firm.data) return;
+
+    const data = firm.data;
+    if (data.settings) localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(data.settings));
+    if (data.partners) localStorage.setItem(STORAGE_KEYS.PARTNERS, JSON.stringify(data.partners));
+    if (data.practiceAreas) localStorage.setItem(STORAGE_KEYS.PRACTICE_AREAS, JSON.stringify(data.practiceAreas));
+    if (data.caseStudies) localStorage.setItem(STORAGE_KEYS.CASE_STUDIES, JSON.stringify(data.caseStudies));
+    if (data.testimonials) localStorage.setItem(STORAGE_KEYS.TESTIMONIALS, JSON.stringify(data.testimonials));
+    if (data.blogPosts) localStorage.setItem(STORAGE_KEYS.BLOG_POSTS, JSON.stringify(data.blogPosts));
+    if (data.offices) localStorage.setItem(STORAGE_KEYS.OFFICES, JSON.stringify(data.offices));
+    if (data.messages) localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(data.messages));
+
+    firmService.setActiveFirmSlug(firm.slug, false);
+
+    if (triggerEvent) {
+      notifyChange();
+    }
+  },
+
+  // Switch the active Law Firm
+  switchFirm: (slug: string) => {
+    firmService.setActiveFirmSlug(slug, true);
+    storageService.loadFirm(slug, true);
   },
 
   checkBundledData: () => {
     if (typeof window === 'undefined' || typeof fetch === 'undefined') return;
-    
-    // First try /api/site-data, then fallback to /site_data.json
-    fetch('/api/site-data')
-      .then(res => (res.ok ? res.json() : fetch('/site_data.json').then(r => r.ok ? r.json() : null)))
-      .then(result => {
-        const data = result?.data || result;
+    fetch('/site_data.json')
+      .then(res => (res.ok ? res.json() : null))
+      .then(data => {
         if (data && typeof data === 'object' && (data.partners || data.settings)) {
           const storedVersion = localStorage.getItem('aladl_site_data_bundled_version');
-          if (!storedVersion || (data.exportedAt && data.exportedAt !== storedVersion)) {
+          if (data.exportedAt && data.exportedAt !== storedVersion) {
             storageService.importDataJSON(JSON.stringify(data));
-            if (data.exportedAt) {
-              localStorage.setItem('aladl_site_data_bundled_version', data.exportedAt);
-            }
+            localStorage.setItem('aladl_site_data_bundled_version', data.exportedAt);
             notifyChange();
           }
         }
@@ -203,10 +204,9 @@ export const storageService = {
   checkBundledDataAndSeed: () => {
     if (typeof window === 'undefined') return;
     if (typeof fetch !== 'undefined') {
-      fetch('/api/site-data')
-        .then(res => (res.ok ? res.json() : fetch('/site_data.json').then(r => r.ok ? r.json() : null)))
-        .then(result => {
-          const data = result?.data || result;
+      fetch('/site_data.json')
+        .then(res => (res.ok ? res.json() : null))
+        .then(data => {
           if (data && typeof data === 'object' && (data.partners || data.settings)) {
             storageService.importDataJSON(JSON.stringify(data));
             if (data.exportedAt) {
@@ -222,56 +222,6 @@ export const storageService = {
         });
     } else {
       storageService.seedInitialData();
-    }
-  },
-
-  // Explicit manual upload to central server so all visitors in the world see it immediately
-  publishToCloudServer: async (): Promise<{ success: boolean; message: string; timestamp?: string }> => {
-    try {
-      const snapshot = {
-        partners: storageService.getPartners(),
-        practiceAreas: storageService.getPracticeAreas(),
-        caseStudies: storageService.getCaseStudies(),
-        testimonials: storageService.getTestimonials(),
-        blogPosts: storageService.getBlogPosts(),
-        messages: storageService.getMessages(),
-        settings: storageService.getSettings(),
-        offices: storageService.getOffices(),
-        savedAt: new Date().toISOString(),
-      };
-
-      const res = await fetch('/api/site-data', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(snapshot),
-      });
-
-      if (res.ok) {
-        const json = await res.json();
-        const ts = json.exportedAt || snapshot.savedAt;
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('aladl_site_data_bundled_version', ts);
-          window.dispatchEvent(new CustomEvent('aladl_cloud_synced', {
-            detail: { success: true, timestamp: ts }
-          }));
-        }
-        return {
-          success: true,
-          message: 'تم حفظ ونشر كافة التعديلات على الخادم العام بنجاح! تظهر الآن فوراً لجميع الزوار حول العالم.',
-          timestamp: ts,
-        };
-      } else {
-        const errJson = await res.json().catch(() => ({}));
-        return {
-          success: false,
-          message: errJson.error || 'فشل الخادم في معالجة طلب حفظ البيانات',
-        };
-      }
-    } catch (err: any) {
-      return {
-        success: false,
-        message: err.message || 'حدث خطأ في الاتصال بالخادم السحابي',
-      };
     }
   },
 
@@ -561,8 +511,9 @@ export const storageService = {
     }
   },
 
-  addMessage: (message: Omit<ContactMessage, 'id' | 'createdAt' | 'status'> & { id?: string }): ContactMessage => {
+  addMessage: (message: Omit<ContactMessage, 'id' | 'createdAt' | 'status'> & { id?: string }, firmSlugOverride?: string): ContactMessage => {
     const list = storageService.getMessages();
+    const activeSlug = firmSlugOverride || firmService.getActiveFirmSlug();
     const newMsg: ContactMessage = {
       id: message.id || `msg-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
       fullName: message.fullName,
@@ -580,6 +531,29 @@ export const storageService = {
     localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(updated));
     mirrorAllDataToPersistence();
     notifyChange();
+
+    // Async push to Supabase consultation_inquiries table
+    try {
+      const config = getStoredSupabaseConfig();
+      if (config.url && config.anonKey) {
+        const client = getSupabase();
+        Promise.resolve(client.from('consultation_inquiries').insert({
+          id: isValidUUID(newMsg.id) ? newMsg.id : toValidUUID(newMsg.id),
+          firm_slug: activeSlug,
+          full_name: newMsg.fullName,
+          phone: newMsg.phone,
+          email: newMsg.email || '',
+          company: newMsg.company || '',
+          consultation_type: newMsg.consultationType || '',
+          preferred_date: newMsg.preferredDate || '',
+          is_urgent: newMsg.isUrgent || false,
+          message: newMsg.message || '',
+          status: 'new',
+          created_at: newMsg.createdAt,
+        })).catch(() => {});
+      }
+    } catch {}
+
     return newMsg;
   },
 
@@ -817,6 +791,88 @@ export const initialContactMessages: ContactMessage[] = ${JSON.stringify(message
     localStorage.setItem(STORAGE_KEYS.OFFICES, JSON.stringify(initialOffices));
     mirrorAllDataToPersistence();
     notifyChange();
+  },
+
+  // Sync current active law firm to Supabase cloud database
+  syncActiveFirmToSupabase: async (): Promise<{ success: boolean; message: string }> => {
+    try {
+      const activeSlug = firmService.getActiveFirmSlug();
+      let firm = firmService.getFirmBySlug(activeSlug);
+      
+      const snapshot = {
+        partners: storageService.getPartners(),
+        practiceAreas: storageService.getPracticeAreas(),
+        caseStudies: storageService.getCaseStudies(),
+        testimonials: storageService.getTestimonials(),
+        blogPosts: storageService.getBlogPosts(),
+        messages: storageService.getMessages(),
+        settings: storageService.getSettings(),
+        offices: storageService.getOffices(),
+        savedAt: new Date().toISOString(),
+      };
+
+      if (!firm) {
+        firm = {
+          id: toValidUUID(`firm_${activeSlug || 'al-adl'}`),
+          slug: activeSlug || 'al-adl',
+          nameAr: snapshot.settings.firmNameAr || 'شركة العدل الدولية للمحاماة',
+          nameEn: snapshot.settings.firmNameEn || 'Al-Adl International Law Firm',
+          cityAr: snapshot.offices?.[0]?.cityAr || 'الرياض',
+          cityEn: snapshot.offices?.[0]?.cityEn || 'Riyadh',
+          phone: snapshot.settings.phone || '+966 11 456 7890',
+          email: snapshot.settings.email || 'contact@aladl-law.sa',
+          adminPassword: snapshot.settings.adminPassword || '123456',
+          themeColor: snapshot.settings.primaryColor || '#c5a869',
+          isVerified: true,
+          featured: true,
+          data: snapshot,
+          subscription: {
+            planTier: 'professional',
+            planNameAr: 'الباقة السنوية الاحترافية',
+            planNameEn: 'Professional Annual Plan',
+            status: 'active',
+            isSiteActive: true,
+            startDate: new Date().toISOString(),
+            endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+            annualFee: 3500,
+            currency: 'SAR',
+            paymentStatus: 'paid',
+            autoRenew: true
+          },
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+      } else {
+        firm.data = snapshot;
+        firm.nameAr = snapshot.settings.firmNameAr || firm.nameAr;
+        firm.nameEn = snapshot.settings.firmNameEn || firm.nameEn;
+        firm.phone = snapshot.settings.phone || firm.phone;
+        firm.email = snapshot.settings.email || firm.email;
+        firm.adminPassword = snapshot.settings.adminPassword || firm.adminPassword;
+        firm.themeColor = snapshot.settings.primaryColor || firm.themeColor || '#c5a869';
+      }
+
+      await firmService.saveFirm(firm);
+      return await firmService.syncFirmToSupabase(firm);
+    } catch (err: any) {
+      return { success: false, message: err?.message || 'حدث خطأ أثناء المزامنة مع Supabase' };
+    }
+  },
+
+  // Fetch and refresh active law firm data from Supabase cloud database
+  fetchActiveFirmFromSupabase: async (): Promise<{ success: boolean; message: string }> => {
+    try {
+      const activeSlug = firmService.getActiveFirmSlug();
+      const res = await firmService.fetchFromSupabase();
+      if (res.success) {
+        storageService.switchFirm(activeSlug);
+        notifyChange();
+        return { success: true, message: 'تم استرداد وتحديث أحدث بيانات الموقع من Supabase بنجاح!' };
+      }
+      return { success: false, message: res.message || 'فشل جلب البيانات من Supabase' };
+    } catch (err: any) {
+      return { success: false, message: err?.message || 'فشل جلب البيانات من Supabase' };
+    }
   },
 
   // Safe Cache Clearing & Application Update:

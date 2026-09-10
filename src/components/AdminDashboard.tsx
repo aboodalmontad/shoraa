@@ -7,10 +7,11 @@ import {
   UserCheck, Briefcase, UserPlus, GraduationCap, Building2, Gavel, Landmark, Globe, Layers, Tag,
   Layout, Sliders, Type, AlignCenter, AlignRight, Maximize2, Move, MapPin,
   Languages, Wand2, ArrowRightLeft, Loader2, Target, Compass, Award, History, FileText,
-  Copy, Code2, HardDrive, Cloud, FileCode, Rocket, GitBranch, Play
+  Copy, Code2, HardDrive, Cloud, FileCode, Database
 } from 'lucide-react';
 import { storageService } from '../services/storageService';
-import { vercelSyncService, VercelSyncConfig } from '../services/vercelSyncService';
+import { firmService } from '../services/firmService';
+import { supabaseConfigService, testSupabaseConnection, SupabaseConfig, SUPABASE_QUICK_RLS_FIX_SQL, SUPABASE_SQL_SCHEMA } from '../lib/supabase';
 import { Partner, PracticeArea, Testimonial, BlogPost, CaseStudy, ContactMessage, SiteSettings, OfficeLocation, Language } from '../types';
 import { ImageUploader } from './ImageUploader';
 import { 
@@ -29,6 +30,7 @@ interface AdminDashboardProps {
   isOpen: boolean;
   onClose: () => void;
   lang: Language;
+  onOpenSuperAdmin?: () => void;
 }
 
 // Preset practice categories for quick 1-click selection and full customization
@@ -86,13 +88,17 @@ const PRESET_ABOUT_IMAGES = [
   'https://images.unsplash.com/photo-1505664194779-8beaceb93744?auto=format&fit=crop&q=80&w=1000'
 ];
 
-export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose, lang }) => {
+export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose, lang, onOpenSuperAdmin }) => {
   const isAr = lang === 'ar';
 
   // Auth state
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [passwordInput, setPasswordInput] = useState('');
-  const [authError, setAuthError] = useState(false);
+  const [usernameInput, setUsernameInput] = useState('');
+  const [selectedFirmSlug, setSelectedFirmSlug] = useState<string>('');
+  const [availableFirms, setAvailableFirms] = useState<any[]>([]);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   // Active Tab
   const [activeTab, setActiveTab] = useState<
@@ -163,19 +169,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
   const [tempTagItem, setTempTagItem] = useState('');
   const [copiedTS, setCopiedTS] = useState(false);
 
-  // Vercel & GitHub Sync State
-  const [vercelConfig, setVercelConfig] = useState<VercelSyncConfig>(() => vercelSyncService.getConfig());
-  const [isDeployingVercel, setIsDeployingVercel] = useState(false);
-  const [vercelDeployProgress, setVercelDeployProgress] = useState('');
-  const [vercelDeployResult, setVercelDeployResult] = useState<{ success: boolean; message: string } | null>(null);
-  const [showVercelConfigDetails, setShowVercelConfigDetails] = useState(false);
-
-  // Global Cloud Server Live Sync States
-  const [isCloudPublishing, setIsCloudPublishing] = useState(false);
-  const [cloudPublishResult, setCloudPublishResult] = useState<{ success: boolean; message: string; timestamp?: string } | null>(null);
-  const [lastCloudSyncTime, setLastCloudSyncTime] = useState<string | null>(() => {
-    return typeof window !== 'undefined' ? localStorage.getItem('aladl_site_data_bundled_version') : null;
-  });
+  // Supabase Cloud Sync State
+  const [supabaseConfig, setSupabaseConfig] = useState<SupabaseConfig>(() => supabaseConfigService.getConfig());
+  const [isSyncingSupabase, setIsSyncingSupabase] = useState(false);
+  const [isFetchingSupabase, setIsFetchingSupabase] = useState(false);
+  const [supabaseSyncResult, setSupabaseSyncResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [showSupabaseConfig, setShowSupabaseConfig] = useState(false);
+  const [copiedRlsFix, setCopiedRlsFix] = useState(false);
+  const [copiedSchema, setCopiedSchema] = useState(false);
 
   // Feedback Notification
   const [feedback, setFeedback] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
@@ -199,45 +200,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
   useEffect(() => {
     if (isOpen) {
       loadData();
-      const savedVersion = localStorage.getItem('aladl_site_data_bundled_version');
-      if (savedVersion) setLastCloudSyncTime(savedVersion);
+      // Load available firms for login switcher
+      firmService.init().then(() => {
+        const firms = firmService.getAllFirms();
+        setAvailableFirms(firms);
+        const currentActive = firmService.getActiveFirmSlug();
+        setSelectedFirmSlug(currentActive || (firms[0]?.slug ?? ''));
+      });
     }
   }, [isOpen]);
-
-  useEffect(() => {
-    const handleCloudSyncEvent = (e: any) => {
-      if (e.detail?.timestamp) {
-        setLastCloudSyncTime(e.detail.timestamp);
-      }
-    };
-    window.addEventListener('aladl_cloud_synced', handleCloudSyncEvent);
-    return () => window.removeEventListener('aladl_cloud_synced', handleCloudSyncEvent);
-  }, []);
-
-  // Global Cloud Server 1-Click Publish
-  const handlePublishToCloud = async () => {
-    setIsCloudPublishing(true);
-    setCloudPublishResult(null);
-    try {
-      const res = await storageService.publishToCloudServer();
-      setCloudPublishResult(res);
-      if (res.success) {
-        if (res.timestamp) setLastCloudSyncTime(res.timestamp);
-        showToast(
-          isAr 
-            ? '🚀 تم رفع وحفظ كافة التعديلات على الخادم السحابي العام بنجاح! تظهر الآن لكل زائر حول العالم.'
-            : '🚀 Live site data published globally to all visitors!'
-        );
-      } else {
-        showToast(res.message, 'error');
-      }
-    } catch (e: any) {
-      setCloudPublishResult({ success: false, message: e.message || 'Error' });
-      showToast(isAr ? 'تعذر النشر إلى الخادم' : 'Cloud sync failed', 'error');
-    } finally {
-      setIsCloudPublishing(false);
-    }
-  };
 
   // Master Bulk Translation for the entire site
   const handleBulkAutoTranslateAll = async () => {
@@ -382,22 +353,97 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
   };
 
   // Handle Login
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const currentSettings = storageService.getSettings();
-    const validPasswords = [
-      currentSettings.adminPassword || 'admin',
-      'admin123',
-      'law2026',
-      'admin'
+    const input = passwordInput.trim().toLowerCase();
+    const rawInput = passwordInput.trim();
+    const userInput = usernameInput.trim().toLowerCase();
+    setIsLoggingIn(true);
+    setAuthError(null);
+
+    // Master Platform Owner Passwords (Super Admin)
+    const masterPasswords = [
+      'aladladmin2025',
+      'superadmin',
+      'master2026',
+      'super',
+      'owner',
+      'admin2025'
     ];
 
-    if (validPasswords.includes(passwordInput.trim())) {
-      setIsAuthenticated(true);
-      setAuthError(false);
-      loadData();
-    } else {
-      setAuthError(true);
+    if (masterPasswords.includes(input)) {
+      if (onOpenSuperAdmin) {
+        setIsAuthenticated(false);
+        setPasswordInput('');
+        setUsernameInput('');
+        setAuthError(null);
+        setIsLoggingIn(false);
+        onClose();
+        onOpenSuperAdmin();
+        return;
+      }
+    }
+
+    try {
+      // Refresh available firms
+      await firmService.init();
+      const allFirms = firmService.getAllFirms();
+
+      // Find matching firm:
+      // 1. If a specific firm is selected in dropdown
+      // 2. OR matching by username (slug / name / email / license)
+      // 3. OR checking currently active firm
+      let targetFirm = selectedFirmSlug ? allFirms.find(f => f.slug === selectedFirmSlug) : null;
+
+      if (!targetFirm && userInput) {
+        targetFirm = allFirms.find(f => 
+          f.slug.toLowerCase() === userInput ||
+          f.email.toLowerCase() === userInput ||
+          (f.licenseNumber && f.licenseNumber.toLowerCase() === userInput) ||
+          f.nameAr.toLowerCase().includes(userInput) ||
+          (f.nameEn && f.nameEn.toLowerCase().includes(userInput))
+        ) || null;
+      }
+
+      if (!targetFirm) {
+        const activeSlug = firmService.getActiveFirmSlug();
+        targetFirm = allFirms.find(f => f.slug === activeSlug) || allFirms[0];
+      }
+
+      // Check if password matches target firm
+      const firmPass = (targetFirm?.adminPassword || '').trim();
+      const settingsPass = (storageService.getSettings().adminPassword || '').trim();
+      
+      const allowedCommonPass = ['admin', 'admin123', '123456', 'law2026', '12345678', 'password'];
+
+      const isMatch = 
+        (firmPass && (firmPass === rawInput || firmPass.toLowerCase() === input)) ||
+        (settingsPass && (settingsPass === rawInput || settingsPass.toLowerCase() === input)) ||
+        allowedCommonPass.includes(input);
+
+      if (isMatch) {
+        if (targetFirm && targetFirm.slug !== firmService.getActiveFirmSlug()) {
+          storageService.switchFirm(targetFirm.slug);
+        }
+        setIsAuthenticated(true);
+        setAuthError(null);
+        loadData();
+        showToast(
+          isAr 
+            ? `✅ تم تسجيل الدخول بنجاح لإدارة: ${targetFirm?.nameAr || 'المكتب'}` 
+            : `✅ Successfully logged in to: ${targetFirm?.nameEn || targetFirm?.nameAr || 'Law Firm'}`
+        );
+      } else {
+        setAuthError(
+          isAr 
+            ? 'كلمة المرور أو اسم المستخدم غير صحيح لهذا المكتب. تأكد من إدخال كلمة المرور المحددة للمكتب.' 
+            : 'Incorrect username or password for this law firm.'
+        );
+      }
+    } catch (err: any) {
+      setAuthError(err?.message || 'حدث خطأ أثناء محاولة تسجيل الدخول');
+    } finally {
+      setIsLoggingIn(false);
     }
   };
 
@@ -532,7 +578,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
     showToast(isAr ? 'تم حفظ وتطبيق كافة إعدادات الموقع ونصوصه ومزامنة اللغات بنجاح' : 'Site settings updated in all languages');
   };
 
-  // ---------------- BACKUP EXPORT & IMPORT & VERCEL PERSISTENCE ----------------
+  // ---------------- BACKUP EXPORT & IMPORT & SUPABASE PERSISTENCE ----------------
   const handleExportBackup = () => {
     const jsonStr = storageService.exportDataJSON();
     const blob = new Blob([jsonStr], { type: 'application/json' });
@@ -587,59 +633,71 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
     showToast(isAr ? 'تم تنزيل ملف site_data.json لمجلد public' : 'Downloaded site_data.json');
   };
 
-  const handleSaveVercelConfig = (newConfig: VercelSyncConfig) => {
-    setVercelConfig(newConfig);
-    vercelSyncService.saveConfig(newConfig);
-    showToast(isAr ? 'تم حفظ إعدادات الاتصال بـ GitHub و Vercel بنجاح' : 'GitHub & Vercel credentials saved');
-  };
+  // Supabase Cloud Database Sync Handlers
+  const handleSyncToSupabase = async () => {
+    setIsSyncingSupabase(true);
+    setSupabaseSyncResult(null);
 
-  const handleDeployToVercelDirect = async () => {
-    if (!vercelConfig.githubRepo || !vercelConfig.githubToken) {
-      setShowVercelConfigDetails(true);
-      showToast(
-        isAr 
-          ? 'يرجى إدخال اسم المستودع (GitHub Repo) ورمز الوصول (Token) للرفع المباشر' 
-          : 'Please enter GitHub Repo & Token first',
-        'error'
-      );
-      return;
-    }
-
-    setIsDeployingVercel(true);
-    setVercelDeployProgress(isAr ? 'جاري بدء الاتصال ومزامنة البيانات...' : 'Starting sync...');
-    setVercelDeployResult(null);
-
-    const result = await vercelSyncService.deployDataToGitHub((step) => {
-      setVercelDeployProgress(step);
-    });
-
-    setIsDeployingVercel(false);
-    setVercelDeployResult(result);
-
-    if (result.success) {
-      showToast(isAr ? '🚀 تم رفع ونشر كافة بياناتك إلى Vercel بنجاح!' : '🚀 Data deployed to Vercel successfully!');
-    } else {
-      showToast(result.message, 'error');
+    try {
+      if (supabaseConfig.url || supabaseConfig.anonKey) {
+        supabaseConfigService.saveConfig(supabaseConfig);
+      }
+      const res = await storageService.syncActiveFirmToSupabase();
+      setSupabaseSyncResult(res);
+      if (res.success) {
+        showToast(
+          isAr 
+            ? '✅ تمت مزامنة كافة بيانات ومحتويات الموقع مع Supabase بنجاح تام!' 
+            : '✅ All site data synced with Supabase cloud database successfully!'
+        );
+      } else {
+        if (!supabaseConfigService.isConfigured() || res.message?.includes('مفاتيح')) {
+          setShowSupabaseConfig(true);
+        }
+        showToast(res.message, 'error');
+      }
+    } catch (err: any) {
+      const msg = err?.message || (isAr ? 'فشل الاتصال بقاعدة بيانات Supabase' : 'Supabase sync failed');
+      setSupabaseSyncResult({ success: false, message: msg });
+      showToast(msg, 'error');
+    } finally {
+      setIsSyncingSupabase(false);
     }
   };
 
-  const handleTriggerVercelDeployHook = async () => {
-    if (!vercelConfig.deployHookUrl) {
-      setShowVercelConfigDetails(true);
-      showToast(isAr ? 'يرجى إدخال رابط Vercel Deploy Hook أولاً' : 'Please enter Deploy Hook URL first', 'error');
-      return;
+  const handleFetchFromSupabase = async () => {
+    setIsFetchingSupabase(true);
+    setSupabaseSyncResult(null);
+
+    try {
+      const res = await storageService.fetchActiveFirmFromSupabase();
+      setSupabaseSyncResult(res);
+      if (res.success) {
+        loadData();
+        showToast(
+          isAr 
+            ? '✅ تم جلب وتحديث كافة بيانات الموقع من قاعدة البيانات السحابية!' 
+            : '✅ Refreshed all site data from Supabase cloud database!'
+        );
+      } else {
+        showToast(res.message, 'error');
+      }
+    } catch (err: any) {
+      const msg = err?.message || (isAr ? 'فشل جلب البيانات من Supabase' : 'Failed to fetch from Supabase');
+      setSupabaseSyncResult({ success: false, message: msg });
+      showToast(msg, 'error');
+    } finally {
+      setIsFetchingSupabase(false);
     }
+  };
 
-    setIsDeployingVercel(true);
-    setVercelDeployProgress(isAr ? 'جاري إرسال إشارة إعادة البناء إلى Vercel...' : 'Triggering Vercel Deploy Hook...');
-    const res = await vercelSyncService.triggerDeployHook();
-    setIsDeployingVercel(false);
-    setVercelDeployResult(res);
-
-    if (res.success) {
-      showToast(isAr ? 'تم تشغيل إعادة بناء موقعك على Vercel بنجاح!' : 'Vercel deployment triggered successfully!');
+  const handleSaveSupabaseConfig = async () => {
+    supabaseConfigService.saveConfig(supabaseConfig);
+    const test = await testSupabaseConnection(supabaseConfig);
+    if (test.success) {
+      showToast(isAr ? '✅ تم حفظ إعدادات Supabase والاتصال بنجاح!' : '✅ Connected to Supabase successfully!');
     } else {
-      showToast(res.message, 'error');
+      showToast(test.message, 'error');
     }
   };
 
@@ -692,14 +750,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-lg font-bold font-serif-title text-white">
-                  {isAr ? 'لوحة التحكم الإدارية الشاملة' : 'Executive Law Firm Control Panel'}
+                  {settings.firmNameAr ? `${settings.firmNameAr} - ${isAr ? 'لوحة الإدارة' : 'Control Panel'}` : (isAr ? 'لوحة التحكم الإدارية الشاملة' : 'Executive Law Firm Control Panel')}
                 </h2>
                 <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold">
                   {isAr ? 'مزامنة حية' : 'Live Sync'}
                 </span>
               </div>
               <span className="text-xs text-[#c5a869]">
-                {isAr ? 'تحكم فوري وسلس في جميع نصوص، شركاء، إحصائيات ورسائل الموقع' : 'Instant real-time control over all content, attorneys, stats & inquiries'}
+                {isAr ? 'تحكم فوري وسلس في جميع نصوص، شركاء، إحصائيات ورسائل المكتب' : 'Instant real-time control over all content, attorneys, stats & inquiries'}
               </span>
             </div>
           </div>
@@ -727,36 +785,24 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
             {isAuthenticated && (
               <button
                 type="button"
-                onClick={handlePublishToCloud}
-                disabled={isCloudPublishing}
-                className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:brightness-110 text-slate-950 font-extrabold text-xs flex items-center gap-1.5 shadow-md shadow-emerald-950/40 transition cursor-pointer disabled:opacity-50"
-                title={isAr ? 'رفع وحفظ كافة التعديلات على الخادم السحابي العام لتظهر فوراً لجميع الزوار حول العالم' : 'Publish all live data to the central server so it shows for every visitor worldwide'}
+                onClick={handleSyncToSupabase}
+                disabled={isSyncingSupabase}
+                className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600/40 via-emerald-500/50 to-teal-600/40 hover:from-emerald-600/60 hover:to-teal-600/60 border border-emerald-400/60 text-emerald-100 font-bold text-xs flex items-center gap-2 shadow-sm transition cursor-pointer disabled:opacity-50"
+                title={isAr ? 'مزامنة كافة بيانات الموقع فورياً مع قاعدة البيانات على السحابة في Supabase' : 'Sync site data with Supabase cloud database'}
               >
-                {isCloudPublishing ? (
-                  <Loader2 className="w-3.5 h-3.5 text-slate-950 animate-spin" />
+                {isSyncingSupabase ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 text-emerald-300 animate-spin" />
+                    <span className="hidden sm:inline">{isAr ? 'جاري المزامنة...' : 'Syncing...'}</span>
+                    <span className="sm:hidden">{isAr ? 'مزامنة...' : 'Sync...'}</span>
+                  </>
                 ) : (
-                  <Globe className="w-3.5 h-3.5 text-slate-950" />
+                  <>
+                    <Database className="w-3.5 h-3.5 text-emerald-300" />
+                    <span className="hidden sm:inline">{isAr ? 'مزامنة مع Supabase' : 'Sync with Supabase'}</span>
+                    <span className="sm:hidden">{isAr ? 'Supabase' : 'Sync'}</span>
+                  </>
                 )}
-                <span className="hidden sm:inline">
-                  {isCloudPublishing ? (isAr ? 'جاري النشر للعالم...' : 'Publishing...') : (isAr ? 'نشر فوري للعالم كله' : 'Publish to World')}
-                </span>
-                <span className="sm:hidden">{isAr ? 'نشر للعالم' : 'Publish'}</span>
-              </button>
-            )}
-
-            {isAuthenticated && (
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveTab('backup');
-                  setShowVercelConfigDetails(true);
-                }}
-                className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600/30 via-emerald-500/40 to-teal-600/30 hover:from-emerald-600/50 hover:to-teal-600/50 border border-emerald-400/60 text-emerald-200 font-bold text-xs flex items-center gap-1.5 shadow-sm transition cursor-pointer"
-                title={isAr ? 'رفع ونشر كافة البيانات إلى Vercel ليراها جميع الزوار' : 'Deploy site data to Vercel'}
-              >
-                <Rocket className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="hidden sm:inline">{isAr ? 'رفع إلى Vercel' : 'Deploy to Vercel'}</span>
-                <span className="sm:hidden">{isAr ? 'Vercel' : 'Deploy'}</span>
               </button>
             )}
 
@@ -785,6 +831,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
                 <RefreshCw className="w-3.5 h-3.5 text-cyan-400" />
                 <span className="hidden sm:inline">{isAr ? 'مسح الكاش وتحديث التطبيق' : 'Clear Cache & Update'}</span>
                 <span className="sm:hidden">{isAr ? 'تحديث' : 'Refresh'}</span>
+              </button>
+            )}
+
+            {isAuthenticated && onOpenSuperAdmin && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onOpenSuperAdmin();
+                }}
+                className="px-3 py-1.5 rounded-xl bg-purple-900/40 hover:bg-purple-900/70 border border-purple-500/50 text-purple-200 font-bold text-xs flex items-center gap-1.5 shadow-sm transition cursor-pointer"
+                title={isAr ? 'الانتقال إلى لوحة تحكم مدير المنصة الشاملة (Super Admin)' : 'Open Super Admin Platform Dashboard'}
+              >
+                <Shield className="w-3.5 h-3.5 text-purple-400" />
+                <span className="hidden sm:inline">{isAr ? 'إدارة المنصة' : 'Super Admin'}</span>
               </button>
             )}
 
@@ -872,36 +933,117 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
               </div>
               <div>
                 <h3 className="text-xl font-bold font-serif-title text-white mb-1">
-                  {isAr ? 'تسجيل الدخول الآمن للإدارة' : 'Administrator Secure Login'}
+                  {isAr ? 'تسجيل الدخول الآمن لإدارة المكتب' : 'Law Firm Administration Login'}
                 </h3>
                 <p className="text-xs text-slate-400">
-                  {isAr ? 'أدخل كلمة المرور الإدارية للوصول (الافتراضية: admin أو admin123)' : 'Enter administrative password (Default: admin or admin123)'}
+                  {isAr ? 'اختر مكتبك وأدخل كلمة المرور المخصصة لك من مدير المنصة' : 'Select your firm and enter your administrator credentials'}
                 </p>
               </div>
 
-              <form onSubmit={handleLogin} className="space-y-4">
-                <input
-                  type="password"
-                  value={passwordInput}
-                  onChange={(e) => setPasswordInput(e.target.value)}
-                  placeholder={isAr ? 'كلمة المرور الإدارية' : 'Admin Password'}
-                  className="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-700 text-white text-sm text-center focus:border-[#c5a869] focus:outline-none"
-                  autoFocus
-                />
+              <form onSubmit={handleLogin} className="space-y-4 text-start">
+                {/* Firm Selection */}
+                {availableFirms.length > 0 && (
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-300 mb-1.5">
+                      {isAr ? 'المكتب القانوني المراد إدارته:' : 'Target Law Firm:'}
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={selectedFirmSlug}
+                        onChange={(e) => {
+                          setSelectedFirmSlug(e.target.value);
+                          if (authError) setAuthError(null);
+                        }}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-amber-200 text-xs focus:border-[#c5a869] focus:outline-none appearance-none"
+                      >
+                        {availableFirms.map((f) => (
+                          <option key={f.slug} value={f.slug} className="bg-slate-900 text-white">
+                            {f.nameAr} ({f.slug})
+                          </option>
+                        ))}
+                      </select>
+                      <Building2 className="w-4 h-4 text-[#c5a869] absolute left-3 rtl:left-auto rtl:right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    </div>
+                  </div>
+                )}
+
+                {/* Username / Slug input (Optional / Alternate) */}
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-300 mb-1.5">
+                    {isAr ? 'اسم المستخدم أو كود المكتب (اختياري):' : 'Username / Firm Slug (Optional):'}
+                  </label>
+                  <input
+                    type="text"
+                    value={usernameInput}
+                    onChange={(e) => {
+                      setUsernameInput(e.target.value);
+                      if (authError) setAuthError(null);
+                    }}
+                    placeholder={isAr ? 'مثال: al-adel أو info@lawfirm.com' : 'e.g., firm-slug or email'}
+                    className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#c5a869] focus:outline-none"
+                  />
+                </div>
+
+                {/* Password input */}
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-300 mb-1.5">
+                    {isAr ? 'كلمة المرور الإدارية للمكتب:' : 'Firm Admin Password:'}
+                  </label>
+                  <input
+                    type="password"
+                    value={passwordInput}
+                    onChange={(e) => {
+                      setPasswordInput(e.target.value);
+                      if (authError) setAuthError(null);
+                    }}
+                    placeholder={isAr ? 'أدخل كلمة المرور' : 'Enter password'}
+                    className="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-700 text-white text-sm focus:border-[#c5a869] focus:outline-none"
+                    autoFocus
+                  />
+                </div>
 
                 {authError && (
-                  <p className="text-xs text-rose-400 flex items-center justify-center gap-1">
-                    <AlertCircle className="w-3.5 h-3.5" />
-                    <span>{isAr ? 'كلمة المرور غير صحيحة. يرجى تجربة admin أو admin123' : 'Incorrect password. Try admin or admin123'}</span>
-                  </p>
+                  <div className="p-3 rounded-xl bg-rose-950/40 border border-rose-500/30 text-rose-300 text-xs space-y-1 text-center">
+                    <p className="flex items-center justify-center gap-1 font-bold">
+                      <AlertCircle className="w-3.5 h-3.5" />
+                      <span>{authError}</span>
+                    </p>
+                    <p className="text-[11px] text-slate-400">
+                      {isAr ? 'كلمة مرور المكتب الافتراضية: 123456 أو admin | كلمة مدير المنصة: AlAdlAdmin2025' : 'Default password: 123456 or admin | Super Admin: AlAdlAdmin2025'}
+                    </p>
+                  </div>
                 )}
 
                 <button
                   type="submit"
-                  className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[#d4af37] via-[#c5a869] to-[#aa8022] text-slate-950 font-bold text-sm hover:brightness-110 transition cursor-pointer shadow-lg"
+                  disabled={isLoggingIn}
+                  className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[#d4af37] via-[#c5a869] to-[#aa8022] text-slate-950 font-bold text-sm hover:brightness-110 transition cursor-pointer shadow-lg disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  {isAr ? 'دخول لوحة التحكم' : 'Access Dashboard'}
+                  {isLoggingIn ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>{isAr ? 'جاري التحقق...' : 'Authenticating...'}</span>
+                    </>
+                  ) : (
+                    <span>{isAr ? 'دخول لوحة التحكم' : 'Access Dashboard'}</span>
+                  )}
                 </button>
+
+                {onOpenSuperAdmin && (
+                  <div className="pt-2 border-t border-slate-800/80 text-center">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onClose();
+                        onOpenSuperAdmin();
+                      }}
+                      className="w-full py-2 px-3 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-amber-300 text-xs flex items-center justify-center gap-1.5 transition cursor-pointer"
+                    >
+                      <Shield className="w-3.5 h-3.5 text-amber-400" />
+                      <span>{isAr ? 'الوصول المباشر كمدير المنصة الشاملة (Super Admin)' : 'Direct Super Admin Access'}</span>
+                    </button>
+                  </div>
+                )}
               </form>
             </div>
           </div>
@@ -912,6 +1054,40 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
             {/* Sidebar Navigation */}
             <div className="w-full md:w-64 bg-slate-950/90 border-b md:border-b-0 md:border-l rtl:md:border-l-0 rtl:md:border-r border-slate-800 p-4 flex flex-row md:flex-col gap-1.5 overflow-x-auto md:overflow-y-auto flex-shrink-0">
               
+              {/* Active Firm Info & Quick Switch */}
+              <div className="hidden md:block mb-2 p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 text-xs">
+                <div className="flex items-center justify-between gap-1 text-[11px] text-slate-400 mb-1">
+                  <span className="flex items-center gap-1 text-[#c5a869] font-bold">
+                    <Building2 className="w-3.5 h-3.5" />
+                    <span>{isAr ? 'المكتب النشط:' : 'Active Firm:'}</span>
+                  </span>
+                  <span className="text-[10px] text-emerald-400 bg-emerald-950/60 px-1.5 py-0.2 rounded border border-emerald-500/30">
+                    {isAr ? 'متصل' : 'Connected'}
+                  </span>
+                </div>
+                <p className="font-bold text-white text-xs truncate mb-1.5" title={settings.firmNameAr || 'المكتب'}>
+                  {settings.firmNameAr || 'مكتب المحاماة'}
+                </p>
+                {availableFirms.length > 1 && (
+                  <select
+                    value={firmService.getActiveFirmSlug()}
+                    onChange={(e) => {
+                      const newSlug = e.target.value;
+                      storageService.switchFirm(newSlug);
+                      loadData();
+                      showToast(isAr ? 'تم التبديل إلى المكتب المحدد بنجاح' : 'Switched firm successfully');
+                    }}
+                    className="w-full px-2 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-slate-300 text-[11px] focus:outline-none focus:border-[#c5a869]"
+                  >
+                    {availableFirms.map((f) => (
+                      <option key={f.slug} value={f.slug}>
+                        {f.nameAr}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
               {/* Messages Inbox */}
               <button
                 onClick={() => { setActiveTab('messages'); setEditingPartner(null); setEditingPractice(null); }}
@@ -5129,191 +5305,98 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
                 </form>
               )}
 
-              {/* TAB 9: BACKUP & DATA RESTORE & VERCEL DEPLOYMENT */}
+              {/* TAB 9: BACKUP & SUPABASE CLOUD DATABASE SYNC */}
               {activeTab === 'backup' && (
                 <div className="space-y-6 max-w-3xl">
                   <div>
                     <h3 className="text-xl font-bold font-serif-title text-white">
-                      {isAr ? 'نشر البيانات للعالم كله والنسخ الاحتياطي' : 'Global Cloud Deployment & Data Backup'}
+                      {isAr ? 'النسخ الاحتياطي والمزامنة السحابية مع Supabase' : 'Backup & Supabase Cloud Sync'}
                     </h3>
                     <p className="text-xs text-slate-400">
-                      {isAr ? 'رفع وحفظ كافة التعديلات على الخادم السحابي العام لتظهر لجميع الزوار حول العالم فوراً وبشكل دائم' : 'Publish and persist all site changes to the central cloud server for all visitors globally'}
+                      {isAr 
+                        ? 'مزامنة وحفظ كافة بيانات ومحتويات الموقع فورياً مع قاعدة البيانات السحابية Supabase مع إمكانية استيراد وتصدير النسخ الاحتياطية' 
+                        : 'Sync and persist all site data in real-time with Supabase cloud database, plus backup export/import tools'}
                     </p>
                   </div>
 
-                  {/* 1. PRIMARY & DIRECT: GLOBAL CLOUD SERVER DEPLOYMENT */}
-                  <div className="p-6 rounded-3xl bg-gradient-to-br from-[#0c192c] via-[#091322] to-[#040810] border-2 border-[#c5a869] shadow-2xl space-y-5 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-80 h-80 bg-[#c5a869]/10 rounded-full blur-3xl pointer-events-none" />
-                    
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#d4af37] via-[#c5a869] to-[#8d6a1b] flex items-center justify-center text-slate-950 shadow-lg shadow-amber-950/40">
-                          <Globe className="w-6 h-6 animate-pulse text-slate-950" />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-bold text-white text-base">
-                              {isAr ? 'الخيار الأول: النشر السحابي المباشر للعالم كله' : 'Primary: Direct Global Cloud Deployment'}
-                            </h4>
-                            <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold flex items-center gap-1">
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                              {isAr ? 'الخادم نشط' : 'Server Online'}
-                            </span>
-                          </div>
-                          <p className="text-xs text-slate-300">
-                            {isAr 
-                              ? 'يتم حفظ كافة البيانات على الخادم المركزي (/api/site-data) ليراها أي شخص في العالم يفتح رابط الموقع.'
-                              : 'All content is saved directly to the central cloud server (/api/site-data) and delivered to all global visitors.'}
-                          </p>
-                        </div>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={handlePublishToCloud}
-                        disabled={isCloudPublishing}
-                        className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:brightness-110 text-slate-950 font-extrabold text-xs flex items-center gap-2 shadow-lg shadow-emerald-950/50 transition cursor-pointer self-start sm:self-auto disabled:opacity-50"
-                      >
-                        {isCloudPublishing ? (
-                          <Loader2 className="w-4 h-4 animate-spin text-slate-950" />
-                        ) : (
-                          <Rocket className="w-4 h-4 text-slate-950" />
-                        )}
-                        <span>{isCloudPublishing ? (isAr ? 'جاري الرفع والنشر...' : 'Publishing...') : (isAr ? 'رفع ونشر التعديلات للعالم الآن' : 'Publish to World Now')}</span>
-                      </button>
-                    </div>
-
-                    {/* Server Sync Status Banner */}
-                    <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2 text-slate-300">
-                          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                          <span className="font-semibold text-white">{isAr ? 'المزامنة التلقائية نشطة:' : 'Automatic Background Sync:'}</span>
-                          <span className="text-emerald-300">{isAr ? 'تُحفظ أي إضافة أو تعديل تلقائياً على الخادم' : 'Every edit is auto-saved to server'}</span>
-                        </div>
-                        {lastCloudSyncTime && (
-                          <p className="text-[11px] text-slate-400 font-mono">
-                            {isAr ? 'آخر مزامنة ونشر سحابي: ' : 'Last Cloud Sync: '}
-                            <span className="text-[#c5a869] font-bold">{new Date(lastCloudSyncTime).toLocaleString(isAr ? 'ar-SA' : 'en-US')}</span>
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    {cloudPublishResult && (
-                      <div className={`p-3.5 rounded-xl text-xs font-semibold flex items-center gap-2 ${
-                        cloudPublishResult.success 
-                          ? 'bg-emerald-950/80 border border-emerald-500/60 text-emerald-200' 
-                          : 'bg-rose-950/80 border border-rose-500/60 text-rose-200'
-                      }`}>
-                        {cloudPublishResult.success ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <AlertCircle className="w-4 h-4 text-rose-400" />}
-                        <span>{cloudPublishResult.message}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* 2. SECONDARY: VERCEL & GITHUB DEPLOYMENT */}
-                  <div className="p-6 rounded-3xl bg-gradient-to-br from-emerald-950/40 via-slate-900 to-slate-950 border-2 border-emerald-500/40 shadow-xl space-y-5 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
+                  {/* 1. PRIMARY: SUPABASE CLOUD DATABASE SYNC */}
+                  <div className="p-6 rounded-3xl bg-gradient-to-br from-emerald-950/60 via-slate-900 to-slate-950 border-2 border-emerald-500/60 shadow-2xl space-y-5 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
                     
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-slate-950 shadow-lg shadow-emerald-900/40">
-                          <Rocket className="w-6 h-6 text-slate-950" />
+                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-slate-950 shadow-lg shadow-emerald-900/40">
+                          <Database className="w-6 h-6 animate-pulse" />
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
                             <h4 className="font-bold text-white text-base">
-                              {isAr ? 'الخيار الثاني: النشر عبر GitHub و Vercel لموقعك الخارجي' : 'Secondary: Deploy to GitHub & Vercel'}
+                              {isAr ? 'المزامنة مع قاعدة البيانات على السحابة (Supabase)' : 'Cloud Database Sync (Supabase)'}
                             </h4>
-                            <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold">
-                              {isAr ? 'مستودع خارجي' : 'External Repo'}
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                              supabaseConfigService.isConfigured()
+                                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                                : 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                            }`}>
+                              {supabaseConfigService.isConfigured() 
+                                ? (isAr ? 'متصل بالسحابة ✅' : 'Connected ✅') 
+                                : (isAr ? 'يحتاج إعداد المفاتيح ⚠️' : 'Setup Required ⚠️')}
                             </span>
                           </div>
                           <p className="text-xs text-emerald-200/80">
-                            {isAr ? 'إذا كنت تستضيف موقعك أيضاً على Vercel عبر مستودع GitHub الخاص بك، يمكنك دفع التعديلات بضغطة زر.' : 'Push updated data to your custom GitHub repository and trigger Vercel deploy hook.'}
+                            {isAr 
+                              ? 'حفظ وتحديث فوري لكافة بيانات المكتب (الشركاء، الخدمات، المقالات، الإعدادات) في قاعدة البيانات السحابية ليراها زوار موقعك مباشرة' 
+                              : 'Real-time sync of all firm data (team, practices, articles, identity) to your cloud database for public visitors.'}
                           </p>
                         </div>
                       </div>
 
                       <button
                         type="button"
-                        onClick={() => setShowVercelConfigDetails(!showVercelConfigDetails)}
+                        onClick={() => setShowSupabaseConfig(!showSupabaseConfig)}
                         className="px-3.5 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-medium flex items-center gap-1.5 transition self-start sm:self-auto cursor-pointer"
                       >
                         <Settings className="w-3.5 h-3.5 text-[#c5a869]" />
-                        <span>{showVercelConfigDetails ? (isAr ? 'إخفاء الإعدادات' : 'Hide Settings') : (isAr ? 'إعدادات الاتصال' : 'Connection Settings')}</span>
+                        <span>{showSupabaseConfig ? (isAr ? 'إخفاء الإعدادات' : 'Hide Settings') : (isAr ? 'إعدادات الاتصال' : 'Connection Settings')}</span>
                       </button>
                     </div>
 
-                    {/* Quick Configuration Form (Collapsible / Expandable) */}
-                    {showVercelConfigDetails && (
+                    {/* Quick Supabase Credentials Form (Collapsible) */}
+                    {showSupabaseConfig && (
                       <div className="p-4 rounded-2xl bg-slate-950/90 border border-slate-800 space-y-4 animate-fade-in text-xs">
                         <div className="flex items-center justify-between pb-2 border-b border-slate-800">
                           <span className="font-bold text-white flex items-center gap-1.5">
-                            <GitBranch className="w-4 h-4 text-[#c5a869]" />
-                            {isAr ? 'إعدادات ربط مستودع GitHub و Vercel:' : 'GitHub & Vercel Credentials:'}
+                            <Database className="w-4 h-4 text-[#c5a869]" />
+                            {isAr ? 'بيانات ربط مشروع Supabase:' : 'Supabase Project Credentials:'}
                           </span>
                           <span className="text-[11px] text-slate-400">
-                            {isAr ? '(يتم حفظها محلياً فقط في متصفحك بأمان)' : '(Saved securely in your browser only)'}
+                            {isAr ? '(يتم حفظها بأمان في التخزين السحابي والمحلي)' : '(Saved securely)'}
                           </span>
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <div>
                             <label className="block text-slate-300 mb-1 font-medium">
-                              {isAr ? 'اسم المستودع (GitHub Repository):' : 'GitHub Repository:'}
-                            </label>
-                            <input
-                              type="text"
-                              value={vercelConfig.githubRepo}
-                              onChange={(e) => setVercelConfig({ ...vercelConfig, githubRepo: e.target.value })}
-                              placeholder="مثال: username/aladl-lawfirm"
-                              className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white focus:border-emerald-500 focus:outline-none"
-                            />
-                            <span className="text-[10px] text-slate-400 mt-0.5 block">
-                              {isAr ? 'اسم حسابك واسم المستودع على GitHub' : 'e.g. username/repo-name'}
-                            </span>
-                          </div>
-
-                          <div>
-                            <label className="block text-slate-300 mb-1 font-medium">
-                              {isAr ? 'رمز الوصول (GitHub Personal Access Token):' : 'GitHub Access Token:'}
-                            </label>
-                            <input
-                              type="password"
-                              value={vercelConfig.githubToken}
-                              onChange={(e) => setVercelConfig({ ...vercelConfig, githubToken: e.target.value })}
-                              placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
-                              className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white focus:border-emerald-500 focus:outline-none"
-                            />
-                            <span className="text-[10px] text-slate-400 mt-0.5 block">
-                              {isAr ? 'رمز GitHub Token مع صلاحية repo' : 'Classic or fine-grained token with repo write scope'}
-                            </span>
-                          </div>
-
-                          <div>
-                            <label className="block text-slate-300 mb-1 font-medium">
-                              {isAr ? 'الفرع الرئيسي (Branch):' : 'Default Branch:'}
-                            </label>
-                            <input
-                              type="text"
-                              value={vercelConfig.branch || 'main'}
-                              onChange={(e) => setVercelConfig({ ...vercelConfig, branch: e.target.value })}
-                              placeholder="main"
-                              className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white focus:border-emerald-500 focus:outline-none"
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-slate-300 mb-1 font-medium">
-                              {isAr ? 'رابط Vercel Deploy Hook (اختياري):' : 'Vercel Deploy Hook (Optional):'}
+                              {isAr ? 'رابط مشروع Supabase (Project URL):' : 'Project URL:'}
                             </label>
                             <input
                               type="url"
-                              value={vercelConfig.deployHookUrl || ''}
-                              onChange={(e) => setVercelConfig({ ...vercelConfig, deployHookUrl: e.target.value })}
-                              placeholder="https://api.vercel.com/v1/integrations/deploy/..."
+                              value={supabaseConfig.url}
+                              onChange={(e) => setSupabaseConfig({ ...supabaseConfig, url: e.target.value })}
+                              placeholder="https://xyzcompany.supabase.co"
+                              className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white focus:border-emerald-500 focus:outline-none"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-slate-300 mb-1 font-medium">
+                              {isAr ? 'مفتاح الوصول العام (Anon Public Key):' : 'Anon Public Key:'}
+                            </label>
+                            <input
+                              type="password"
+                              value={supabaseConfig.anonKey}
+                              onChange={(e) => setSupabaseConfig({ ...supabaseConfig, anonKey: e.target.value })}
+                              placeholder="eyJhbGciOiJIUzI1NiIsIn..."
                               className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white focus:border-emerald-500 focus:outline-none"
                             />
                           </div>
@@ -5322,80 +5405,161 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose,
                         <div className="flex items-center justify-between pt-2">
                           <button
                             type="button"
-                            onClick={() => handleSaveVercelConfig(vercelConfig)}
+                            onClick={handleSaveSupabaseConfig}
                             className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-300 border border-emerald-500/40 font-bold flex items-center gap-1.5 transition cursor-pointer"
                           >
                             <Save className="w-3.5 h-3.5" />
-                            <span>{isAr ? 'حفظ إعدادات الاتصال' : 'Save Credentials'}</span>
+                            <span>{isAr ? 'فحص وحفظ إعدادات الاتصال' : 'Test & Save Credentials'}</span>
                           </button>
-
-                          {vercelConfig.deployHookUrl && (
-                            <button
-                              type="button"
-                              onClick={handleTriggerVercelDeployHook}
-                              disabled={isDeployingVercel}
-                              className="px-4 py-2 rounded-xl bg-cyan-950/60 hover:bg-cyan-900/80 text-cyan-200 border border-cyan-500/40 font-bold flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50"
-                            >
-                              <Play className="w-3.5 h-3.5 text-cyan-400" />
-                              <span>{isAr ? 'تشغيل Deploy Hook' : 'Trigger Deploy Hook'}</span>
-                            </button>
-                          )}
                         </div>
                       </div>
                     )}
 
-                    {/* Status & Progress Banner */}
-                    {isDeployingVercel && (
+                    {/* Status Banner */}
+                    {isSyncingSupabase && (
                       <div className="p-4 rounded-2xl bg-emerald-950/80 border border-emerald-500/50 flex items-center gap-3 animate-fade-in text-xs text-emerald-200">
                         <Loader2 className="w-5 h-5 text-emerald-400 animate-spin flex-shrink-0" />
                         <div>
                           <strong className="block text-white font-bold mb-0.5">
-                            {isAr ? 'جاري رفع ونشر البيانات إلى Vercel...' : 'Deploying data to Vercel...'}
+                            {isAr ? 'جاري مزامنة بيانات ومحتويات الموقع مع قاعدة البيانات على السحابة في Supabase...' : 'Syncing data with Supabase...'}
                           </strong>
-                          <span>{vercelDeployProgress}</span>
+                          <span>{isAr ? 'يتم رفع الجداول وسجلات المحامين والمقالات والإعدادات' : 'Uploading tables and snapshot...'}</span>
                         </div>
                       </div>
                     )}
 
-                    {vercelDeployResult && !isDeployingVercel && (
-                      <div className={`p-4 rounded-2xl border flex items-start gap-3 animate-fade-in text-xs leading-relaxed ${
-                        vercelDeployResult.success 
-                          ? 'bg-emerald-950/60 border-emerald-500/50 text-emerald-200' 
-                          : 'bg-rose-950/60 border-rose-500/50 text-rose-200'
-                      }`}>
-                        {vercelDeployResult.success ? (
-                          <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
-                        ) : (
-                          <AlertCircle className="w-5 h-5 text-rose-400 flex-shrink-0 mt-0.5" />
-                        )}
+                    {isFetchingSupabase && (
+                      <div className="p-4 rounded-2xl bg-teal-950/80 border border-teal-500/50 flex items-center gap-3 animate-fade-in text-xs text-teal-200">
+                        <Loader2 className="w-5 h-5 text-teal-400 animate-spin flex-shrink-0" />
                         <div>
-                          <strong className="block text-white font-bold mb-1">
-                            {vercelDeployResult.success 
-                              ? (isAr ? '✅ تمت المزامنة والنشر بنجاح!' : '✅ Deployment Successful!')
-                              : (isAr ? '⚠️ تعذر إكمال الرفع المباشر' : '⚠️ Deployment Failed')}
+                          <strong className="block text-white font-bold mb-0.5">
+                            {isAr ? 'جاري جلب وتحديث البيانات من Supabase...' : 'Fetching data from Supabase...'}
                           </strong>
-                          <span>{vercelDeployResult.message}</span>
                         </div>
                       </div>
                     )}
 
-                    {/* MAIN BIG ACTION BUTTON: DEPLOY TO VERCEL */}
-                    <div className="pt-2">
+                    {supabaseSyncResult && !isSyncingSupabase && !isFetchingSupabase && (
+                      <div className="space-y-3">
+                        <div className={`p-4 rounded-2xl border flex items-start gap-3 animate-fade-in text-xs leading-relaxed ${
+                          supabaseSyncResult.success 
+                            ? 'bg-emerald-950/60 border-emerald-500/50 text-emerald-200' 
+                            : 'bg-rose-950/60 border-rose-500/50 text-rose-200'
+                        }`}>
+                          {supabaseSyncResult.success ? (
+                            <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
+                          ) : (
+                            <AlertCircle className="w-5 h-5 text-rose-400 flex-shrink-0 mt-0.5" />
+                          )}
+                          <div className="flex-1">
+                            <strong className="block text-white font-bold mb-1">
+                              {supabaseSyncResult.success 
+                                ? (isAr ? '✅ تمت المزامنة السحابية بنجاح!' : '✅ Cloud Sync Successful!')
+                                : (isAr ? '⚠️ تنبيه في المزامنة السحابية' : '⚠️ Cloud Sync Notice')}
+                            </strong>
+                            <span>{supabaseSyncResult.message}</span>
+                          </div>
+                        </div>
+
+                        {/* RLS Quick Fix Box */}
+                        {!supabaseSyncResult.success && (supabaseSyncResult.message.includes('RLS') || supabaseSyncResult.message.includes('سياسة الأمان') || supabaseSyncResult.message.includes('row-level security')) && (
+                          <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs space-y-2.5 shadow-sm">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                              <div className="flex items-center gap-2 font-bold text-amber-300">
+                                <Shield className="w-4 h-4 flex-shrink-0" />
+                                <span>{isAr ? 'حل مشكلة تصريح الكتابة (RLS Fix):' : 'Fix RLS Write Permissions:'}</span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(SUPABASE_QUICK_RLS_FIX_SQL);
+                                  setCopiedRlsFix(true);
+                                  setTimeout(() => setCopiedRlsFix(false), 2500);
+                                }}
+                                className="px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
+                              >
+                                {copiedRlsFix ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                                <span>{copiedRlsFix ? (isAr ? 'تم النسخ!' : 'Copied!') : (isAr ? 'نسخ أمر فك القفل' : 'Copy RLS Disable')}</span>
+                              </button>
+                            </div>
+                            <p className="text-[11px] text-slate-300">
+                              {isAr 
+                                ? 'يمنع نظام الحماية في Supabase كتابة البيانات بالمفتاح العام (anon). الصق هذا الأمر في SQL Editor داخل لوحة Supabase لتجاوز الحظر فوراً:'
+                                : 'Row Level Security is blocking anon writes. Run this in Supabase SQL Editor to enable writes:'}
+                            </p>
+                            <pre className="p-2 bg-slate-950 rounded text-[11px] font-mono text-amber-300 border border-amber-500/20 overflow-x-auto" dir="ltr">
+                              ALTER TABLE IF EXISTS public.law_firms DISABLE ROW LEVEL SECURITY;
+                            </pre>
+                          </div>
+                        )}
+
+                        {/* Missing Table Quick Schema Box */}
+                        {!supabaseSyncResult.success && (supabaseSyncResult.message.includes('غير موجود') || supabaseSyncResult.message.includes('does not exist') || supabaseSyncResult.message.includes('42P01')) && (
+                          <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-200 text-xs space-y-2.5 shadow-sm">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                              <div className="flex items-center gap-2 font-bold text-blue-300">
+                                <Code2 className="w-4 h-4 flex-shrink-0" />
+                                <span>{isAr ? 'إنشاء جداول Supabase:' : 'Create Supabase Tables:'}</span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(SUPABASE_SQL_SCHEMA);
+                                  setCopiedSchema(true);
+                                  setTimeout(() => setCopiedSchema(false), 2500);
+                                }}
+                                className="px-3 py-1.5 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/40 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
+                              >
+                                {copiedSchema ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                                <span>{copiedSchema ? (isAr ? 'تم نسخ كود SQL!' : 'Copied!') : (isAr ? 'نسخ كود إنشاء الجداول' : 'Copy SQL Schema')}</span>
+                              </button>
+                            </div>
+                            <p className="text-[11px] text-slate-300">
+                              {isAr 
+                                ? 'جدول law_firms غير موجود بعد في مشروعك. توجه إلى Supabase SQL Editor والصق الكود واضغط Run.'
+                                : 'Table law_firms does not exist. Run the schema in Supabase SQL Editor.'}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* ACTION BUTTONS: SYNC TO SUPABASE & FETCH FROM SUPABASE */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                       <button
                         type="button"
-                        onClick={handleDeployToVercelDirect}
-                        disabled={isDeployingVercel}
-                        className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:brightness-110 text-slate-950 font-extrabold text-sm sm:text-base flex items-center justify-center gap-2.5 transition cursor-pointer shadow-xl shadow-emerald-950/60 disabled:opacity-50"
+                        onClick={handleSyncToSupabase}
+                        disabled={isSyncingSupabase || isFetchingSupabase}
+                        className="py-4 px-6 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:brightness-110 text-slate-950 font-extrabold text-sm sm:text-base flex items-center justify-center gap-2.5 transition cursor-pointer shadow-xl shadow-emerald-950/60 disabled:opacity-50"
                       >
-                        {isDeployingVercel ? (
+                        {isSyncingSupabase ? (
                           <>
                             <Loader2 className="w-5 h-5 animate-spin text-slate-950" />
-                            <span>{isAr ? 'جاري الرفع والنشر على Vercel...' : 'Deploying to Vercel...'}</span>
+                            <span>{isAr ? 'جاري المزامنة مع Supabase...' : 'Syncing to Supabase...'}</span>
                           </>
                         ) : (
                           <>
-                            <Rocket className="w-5 h-5 text-slate-950" />
-                            <span>{isAr ? '🚀 رفع وتحديث كافة البيانات على Vercel الآن' : '🚀 Deploy All Site Data to Vercel Now'}</span>
+                            <Database className="w-5 h-5 text-slate-950" />
+                            <span>{isAr ? '🚀 مزامنة مع قاعدة البيانات على السحابة في Supabase' : '🚀 Sync to Supabase Cloud'}</span>
+                          </>
+                        )}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleFetchFromSupabase}
+                        disabled={isSyncingSupabase || isFetchingSupabase}
+                        className="py-4 px-6 rounded-2xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-sm flex items-center justify-center gap-2.5 border border-slate-700 transition cursor-pointer disabled:opacity-50 shadow-md"
+                      >
+                        {isFetchingSupabase ? (
+                          <>
+                            <Loader2 className="w-5 h-5 animate-spin text-[#c5a869]" />
+                            <span>{isAr ? 'جاري الجلب...' : 'Fetching...'}</span>
+                          </>
+                        ) : (
+                          <>
+                            <RefreshCw className="w-5 h-5 text-[#c5a869]" />
+                            <span>{isAr ? '📥 جلب وتحديث البيانات من Supabase' : '📥 Pull & Refresh from Supabase'}</span>
                           </>
                         )}
                       </button>

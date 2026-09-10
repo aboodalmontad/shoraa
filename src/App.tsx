@@ -17,13 +17,18 @@ import { ContactAndOfficesSection } from './components/ContactAndOfficesSection'
 import { Footer } from './components/Footer';
 import { ConsultationModal } from './components/ConsultationModal';
 import { AdminDashboard } from './components/AdminDashboard';
+import { SuperAdminDashboard } from './components/SuperAdminDashboard';
+import { LawyerSiteBuilderModal } from './components/LawyerSiteBuilderModal';
+import { FirmsDirectoryModal } from './components/FirmsDirectoryModal';
+import { FirmSuspendedNotice } from './components/FirmSuspendedNotice';
 import { storageService } from './services/storageService';
+import { firmService } from './services/firmService';
 import { applyTypographySettings } from './services/typographyService';
-import { Partner, PracticeArea, Testimonial, BlogPost, CaseStudy, SiteSettings, OfficeLocation, Language } from './types';
+import { Partner, PracticeArea, Testimonial, BlogPost, CaseStudy, SiteSettings, OfficeLocation, Language, LawFirm } from './types';
 
 export default function App() {
   const [lang, setLang] = useState<Language>('ar');
-  const [settings, setSettings] = useState<SiteSettings>(storageService.getSettings());
+  const [settings, setSettings] = useState<SiteSettings>(() => storageService.getSettings());
   const [partners, setPartners] = useState<Partner[]>([]);
   const [practiceAreas, setPracticeAreas] = useState<PracticeArea[]>([]);
   const [caseStudies, setCaseStudies] = useState<CaseStudy[]>([]);
@@ -31,15 +36,30 @@ export default function App() {
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
   const [offices, setOffices] = useState<OfficeLocation[]>([]);
 
+  // Multi-Firm State
+  const [activeFirmSlug, setActiveFirmSlug] = useState<string>(() => firmService.getActiveFirmSlug());
+  const [activeFirm, setActiveFirm] = useState<LawFirm | null>(() => firmService.getFirmBySlug(firmService.getActiveFirmSlug()));
+  const [isFirmActive, setIsFirmActive] = useState<boolean>(true);
+
   // Modals state
   const [isConsultationOpen, setIsConsultationOpen] = useState(false);
   const [selectedPracticeId, setSelectedPracticeId] = useState<string | undefined>(undefined);
   const [selectedPartnerId, setSelectedPartnerId] = useState<string | undefined>(undefined);
 
   const [isAdminOpen, setIsAdminOpen] = useState(false);
+  const [isSuperAdminOpen, setIsSuperAdminOpen] = useState(false);
+  const [isSiteBuilderOpen, setIsSiteBuilderOpen] = useState(false);
+  const [isDirectoryOpen, setIsDirectoryOpen] = useState(false);
 
-  // Sync state with storage service
+  // Sync state with storage service & active firm
   const refreshData = () => {
+    const slug = firmService.getActiveFirmSlug();
+    setActiveFirmSlug(slug);
+    const firm = firmService.getFirmBySlug(slug);
+    setActiveFirm(firm);
+    const siteStatus = firmService.isFirmSiteActive(slug);
+    setIsFirmActive(siteStatus.isActive);
+
     setSettings(storageService.getSettings());
     setPartners(storageService.getPartners());
     setPracticeAreas(storageService.getPracticeAreas());
@@ -50,16 +70,50 @@ export default function App() {
   };
 
   useEffect(() => {
-    storageService.init();
-    refreshData();
+    firmService.init().then(() => {
+      storageService.init();
+      refreshData();
 
-    // Listen for live updates from Admin Dashboard
+      // Check URL parameters for direct super admin access (?admin=super or ?super=1)
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('admin') === 'super' || urlParams.get('super') === '1' || urlParams.get('superadmin') === 'true') {
+        setIsSuperAdminOpen(true);
+      }
+    });
+
+    // Listen for live updates from Admin Dashboard and Firm Switcher
     const handleStorageChange = () => {
       refreshData();
     };
 
+    const handlePopState = () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlSlug = urlParams.get('firm') || firmService.getDefaultPublicFirmSlug();
+      if (urlSlug !== firmService.getActiveFirmSlug()) {
+        storageService.switchFirm(urlSlug);
+        refreshData();
+      }
+    };
+
+    // Discreet shortcut for Super Admin (Ctrl+Shift+S or Alt+S)
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 's') || (e.altKey && e.key.toLowerCase() === 's')) {
+        e.preventDefault();
+        setIsSuperAdminOpen(prev => !prev);
+      }
+    };
+
     window.addEventListener('aladl_storage_sync', handleStorageChange);
-    return () => window.removeEventListener('aladl_storage_sync', handleStorageChange);
+    window.addEventListener('aladl_firms_updated', handleStorageChange);
+    window.addEventListener('popstate', handlePopState);
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('aladl_storage_sync', handleStorageChange);
+      window.removeEventListener('aladl_firms_updated', handleStorageChange);
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
   }, []);
 
   // Update HTML document direction, title and typography on settings/language change
@@ -88,87 +142,110 @@ export default function App() {
     setIsConsultationOpen(true);
   };
 
+  const handleSelectFirm = (slug: string) => {
+    storageService.switchFirm(slug);
+    refreshData();
+  };
+
+  const handleFirmCreated = (newFirm: LawFirm) => {
+    storageService.switchFirm(newFirm.slug);
+    refreshData();
+  };
+
   return (
     <div className="min-h-screen bg-[#fbf8f2] text-[#181512] selection:bg-[#b38a38]/30 selection:text-[#87641d] font-body-custom">
       
-      {/* 1. Header / Navbar */}
-      <Navbar
-        settings={settings}
-        lang={lang}
-        onChangeLang={handleChangeLang}
-        onOpenConsultation={handleOpenConsultation}
-        onOpenAdmin={() => setIsAdminOpen(true)}
-      />
+      {/* If current firm is suspended / expired, show the suspension notice */}
+      {!isFirmActive && activeFirm ? (
+        <FirmSuspendedNotice
+          firm={activeFirm}
+          lang={lang}
+          onOpenFirmAdmin={() => setIsAdminOpen(true)}
+          onOpenSuperAdmin={() => setIsSuperAdminOpen(true)}
+        />
+      ) : (
+        <>
+          {/* 1. Header / Navbar */}
+          <Navbar
+            settings={settings}
+            lang={lang}
+            onChangeLang={handleChangeLang}
+            onOpenConsultation={handleOpenConsultation}
+            onOpenAdmin={() => setIsAdminOpen(true)}
+          />
 
-      {/* 2. Hero Section */}
-      <HeroSection
-        settings={settings}
-        lang={lang}
-        onOpenConsultation={() => handleOpenConsultation()}
-      />
+          {/* 2. Hero Section */}
+          <HeroSection
+            settings={settings}
+            lang={lang}
+            onOpenConsultation={() => handleOpenConsultation()}
+          />
 
-      {/* 3. About Us Section */}
-      <AboutSection
-        settings={settings}
-        lang={lang}
-        onOpenConsultation={() => handleOpenConsultation()}
-      />
+          {/* 3. About Us Section */}
+          <AboutSection
+            settings={settings}
+            lang={lang}
+            onOpenConsultation={() => handleOpenConsultation()}
+          />
 
-      {/* 4. Practice Areas Section */}
-      <PracticeAreasSection
-        practiceAreas={practiceAreas}
-        partners={partners}
-        lang={lang}
-        onOpenConsultation={handleOpenConsultation}
-      />
+          {/* 4. Practice Areas Section */}
+          <PracticeAreasSection
+            practiceAreas={practiceAreas}
+            partners={partners}
+            lang={lang}
+            onOpenConsultation={handleOpenConsultation}
+          />
 
-      {/* 5. Our Partners & Attorneys */}
-      <PartnersSection
-        partners={partners}
-        lang={lang}
-        onOpenConsultation={handleOpenConsultation}
-      />
+          {/* 5. Our Partners & Attorneys */}
+          <PartnersSection
+            partners={partners}
+            lang={lang}
+            onOpenConsultation={handleOpenConsultation}
+          />
 
-      {/* 6. Why Choose Us */}
-      <WhyChooseUsSection
-        lang={lang}
-      />
+          {/* 6. Why Choose Us */}
+          <WhyChooseUsSection
+            lang={lang}
+          />
 
-      {/* 7. Landmark Achievements & Transactions */}
-      <AchievementsSection
-        caseStudies={caseStudies}
-        lang={lang}
-        onOpenConsultation={() => handleOpenConsultation()}
-      />
+          {/* 7. Landmark Achievements & Transactions */}
+          <AchievementsSection
+            caseStudies={caseStudies}
+            lang={lang}
+            onOpenConsultation={() => handleOpenConsultation()}
+          />
 
-      {/* 8. Client Testimonials */}
-      <TestimonialsSection
-        testimonials={testimonials}
-        lang={lang}
-      />
+          {/* 8. Client Testimonials */}
+          <TestimonialsSection
+            testimonials={testimonials}
+            lang={lang}
+          />
 
-      {/* 9. Legal Blog & Thought Leadership */}
-      <BlogSection
-        blogPosts={blogPosts}
-        lang={lang}
-      />
+          {/* 9. Legal Blog & Thought Leadership */}
+          <BlogSection
+            blogPosts={blogPosts}
+            lang={lang}
+          />
 
-      {/* 10. Contact & Interactive Office Locations */}
-      <ContactAndOfficesSection
-        settings={settings}
-        practiceAreas={practiceAreas}
-        offices={offices}
-        lang={lang}
-      />
+          {/* 10. Contact & Interactive Office Locations */}
+          <ContactAndOfficesSection
+            settings={settings}
+            practiceAreas={practiceAreas}
+            offices={offices}
+            lang={lang}
+          />
 
-      {/* 11. Footer */}
-      <Footer
-        settings={settings}
-        practiceAreas={practiceAreas}
-        lang={lang}
-        onOpenConsultation={handleOpenConsultation}
-        onOpenAdmin={() => setIsAdminOpen(true)}
-      />
+          {/* 11. Footer */}
+          <Footer
+            settings={settings}
+            practiceAreas={practiceAreas}
+            lang={lang}
+            onOpenConsultation={handleOpenConsultation}
+            onOpenAdmin={() => setIsAdminOpen(true)}
+            onOpenSuperAdmin={() => setIsSuperAdminOpen(true)}
+          />
+        </>
+      )}
 
       {/* Modals */}
       <ConsultationModal
@@ -181,10 +258,51 @@ export default function App() {
         lang={lang}
       />
 
-      {/* Protected Admin Control Center - The ONLY place for modifications */}
+      {/* Protected Admin Control Center - Single Firm Level */}
       <AdminDashboard
         isOpen={isAdminOpen}
         onClose={() => setIsAdminOpen(false)}
+        lang={lang}
+        onOpenSuperAdmin={() => {
+          setIsAdminOpen(false);
+          setIsSuperAdminOpen(true);
+        }}
+      />
+
+      {/* Platform Owner Super Admin Dashboard - All Firms & Subscriptions & Supabase Cloud Sync */}
+      <SuperAdminDashboard
+        isOpen={isSuperAdminOpen}
+        onClose={() => setIsSuperAdminOpen(false)}
+        lang={lang}
+        onSelectFirmToManage={(slug) => {
+          handleSelectFirm(slug);
+          setIsSuperAdminOpen(false);
+          setIsAdminOpen(true);
+        }}
+        onOpenCreateModal={() => {
+          setIsSuperAdminOpen(false);
+          setIsSiteBuilderOpen(true);
+        }}
+      />
+
+      {/* Lawyer 1-Click Site Builder Modal */}
+      <LawyerSiteBuilderModal
+        isOpen={isSiteBuilderOpen}
+        onClose={() => setIsSiteBuilderOpen(false)}
+        onFirmCreated={handleFirmCreated}
+        lang={lang}
+      />
+
+      {/* Law Firms Directory Modal */}
+      <FirmsDirectoryModal
+        isOpen={isDirectoryOpen}
+        onClose={() => setIsDirectoryOpen(false)}
+        onSelectFirm={handleSelectFirm}
+        onOpenAdmin={(slug) => {
+          if (slug) handleSelectFirm(slug);
+          setIsDirectoryOpen(false);
+          setIsAdminOpen(true);
+        }}
         lang={lang}
       />
 

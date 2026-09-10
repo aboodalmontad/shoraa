@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Star, MessageSquareQuote, ChevronLeft, ChevronRight, CheckCircle } from 'lucide-react';
+import React from 'react';
+import { Star, MessageSquareQuote, CheckCircle } from 'lucide-react';
 import { Testimonial, Language } from '../types';
 import { useTranslation, getLocalized } from '../services/i18n';
 
@@ -10,28 +10,8 @@ interface TestimonialsSectionProps {
 
 export const TestimonialsSection: React.FC<TestimonialsSectionProps> = ({ testimonials, lang }) => {
   const t = useTranslation(lang);
-  const [currentIndex, setCurrentIndex] = useState(0);
-
-  const next = () => {
-    setCurrentIndex((prev) => (prev + 1) % testimonials.length);
-  };
-
-  const prev = () => {
-    setCurrentIndex((prev) => (prev - 1 + testimonials.length) % testimonials.length);
-  };
 
   if (!testimonials || testimonials.length === 0) return null;
-
-  const current = testimonials[currentIndex];
-  const quote = getLocalized(current, 'content', lang, current.content);
-  const clientName = getLocalized(current, 'clientName', lang, current.clientName);
-  const clientRole = getLocalized(current, 'clientRole', lang, current.clientRole);
-  const company = getLocalized(current, 'company', lang, current.company);
-  const caseType = getLocalized(current, 'caseType', lang, current.caseType);
-
-  const isRtl = lang === 'ar';
-  const PrevArrow = isRtl ? ChevronRight : ChevronLeft;
-  const NextArrow = isRtl ? ChevronLeft : ChevronRight;
 
   return (
     <section id="testimonials" className="py-24 bg-[#fbf8f2] relative border-t border-[#e6ddcc] overflow-hidden">
@@ -68,97 +48,86 @@ export const TestimonialsSection: React.FC<TestimonialsSectionProps> = ({ testim
           </p>
         </div>
 
-        {/* Testimonials Carousel / Featured Card */}
-        <div className="max-w-4xl mx-auto">
-          <div className="relative rounded-3xl bg-white p-8 sm:p-12 border border-[#c5a869]/40 shadow-xl font-cards-custom">
-            
-            {/* Top Quote Icon & Case Badge */}
-            <div className="flex items-center justify-between mb-8">
-              <div className="w-12 h-12 rounded-xl bg-[#b38a38]/15 flex items-center justify-center border border-[#b38a38]/30">
-                <MessageSquareQuote className="w-6 h-6 text-[#87641d]" />
-              </div>
+        {/* Testimonials Stacked Vertically (تحت بعضها) */}
+        <div className="max-w-4xl mx-auto space-y-6 sm:space-y-8">
+          {testimonials.map((item, index) => {
+            const quote = getLocalized(item, 'content', lang, item.content);
+            const clientName = getLocalized(item, 'clientName', lang, item.clientName);
+            const clientRole = getLocalized(item, 'clientRole', lang, item.clientRole);
+            const company = getLocalized(item, 'company', lang, item.company);
+            const caseType = getLocalized(item, 'caseType', lang, item.caseType);
 
-              <div className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#f4eee2] border border-[#e6ddcc] text-xs text-[#87641d] font-bold">
-                <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
-                <span>{caseType}</span>
-                <span className="text-[#6b6255] font-mono">({current.year})</span>
-              </div>
-            </div>
+            return (
+              <article
+                key={item.id || index}
+                id={`testimonial-card-${item.id || index}`}
+                className="relative rounded-3xl bg-white p-6 sm:p-10 border border-[#c5a869]/35 shadow-sm hover:shadow-xl hover:border-[#b38a38]/60 transition-all duration-300 font-cards-custom group"
+              >
+                {/* Top Quote Icon & Case Badge & Rating */}
+                <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-xl bg-[#b38a38]/12 flex items-center justify-center border border-[#b38a38]/30 text-[#87641d] group-hover:scale-105 transition-transform">
+                      <MessageSquareQuote className="w-5 h-5" />
+                    </div>
+                    {/* Stars */}
+                    <div className="flex items-center gap-1" aria-label={`Rating: ${item.rating || 5} out of 5 stars`}>
+                      {[...Array(5)].map((_, i) => (
+                        <Star
+                          key={i}
+                          className={`w-4 h-4 sm:w-5 sm:h-5 ${i < (item.rating || 5) ? 'fill-[#b38a38] text-[#b38a38]' : 'text-slate-200'}`}
+                        />
+                      ))}
+                    </div>
+                  </div>
 
-            {/* Stars */}
-            <div className="flex items-center gap-1 mb-6">
-              {[...Array(5)].map((_, i) => (
-                <Star
-                  key={i}
-                  className={`w-5 h-5 ${i < current.rating ? 'fill-[#b38a38] text-[#b38a38]' : 'text-slate-300'}`}
-                />
-              ))}
-            </div>
-
-            {/* Quote Content */}
-            <blockquote className="text-lg sm:text-2xl font-serif-title text-[#181512] leading-relaxed mb-8 italic">
-              "{quote}"
-            </blockquote>
-
-            {/* Client Info Bar */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-6 border-t border-[#e6ddcc]">
-              <div className="flex items-center gap-4">
-                <img
-                  src={current.avatar}
-                  alt={clientName}
-                  className="w-14 h-14 rounded-full object-cover border-2 border-[#b38a38]/50"
-                />
-                <div>
-                  <h4 className="text-[#181512] font-bold text-base">
-                    {clientName}
-                  </h4>
-                  <p className="text-xs text-[#87641d] font-bold">
-                    {clientRole}
-                  </p>
-                  <p className="text-xs text-[#6b6255]">
-                    {company}
-                  </p>
-                </div>
-              </div>
-
-              {/* Navigation Arrows */}
-              <div className="flex items-center gap-2 self-end sm:self-center">
-                <button
-                  onClick={prev}
-                  className="p-3 rounded-full bg-[#f4eee2] hover:bg-[#b38a38] text-[#4b4334] hover:text-white transition border border-[#e6ddcc] cursor-pointer"
-                  aria-label="Previous Testimonial"
-                >
-                  <PrevArrow className="w-5 h-5" />
-                </button>
-
-                <div className="text-xs font-mono font-bold text-[#6b6255] px-2">
-                  {currentIndex + 1} / {testimonials.length}
+                  {caseType && (
+                    <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#f4eee2] border border-[#e6ddcc] text-xs text-[#87641d] font-bold">
+                      <CheckCircle className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+                      <span>{caseType}</span>
+                      {item.year && <span className="text-[#6b6255] font-mono">({item.year})</span>}
+                    </div>
+                  )}
                 </div>
 
-                <button
-                  onClick={next}
-                  className="p-3 rounded-full bg-[#f4eee2] hover:bg-[#b38a38] text-[#4b4334] hover:text-white transition border border-[#e6ddcc] cursor-pointer"
-                  aria-label="Next Testimonial"
-                >
-                  <NextArrow className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+                {/* Quote Content */}
+                <blockquote className="text-base sm:text-xl font-serif-title text-[#181512] leading-relaxed mb-6 italic">
+                  "{quote}"
+                </blockquote>
 
-        {/* Thumbnail Selector row */}
-        <div className="flex items-center justify-center gap-3 mt-8">
-          {testimonials.map((_, idx) => (
-            <button
-              key={idx}
-              onClick={() => setCurrentIndex(idx)}
-              className={`h-2 rounded-full transition-all duration-300 cursor-pointer ${
-                currentIndex === idx ? 'w-8 bg-[#b38a38]' : 'w-2 bg-[#d8ceb8] hover:bg-[#b38a38]/60'
-              }`}
-              aria-label={`Go to slide ${idx + 1}`}
-            />
-          ))}
+                {/* Client Info Bar */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-6 border-t border-[#e6ddcc]/80">
+                  <div className="flex items-center gap-4">
+                    <img
+                      src={item.avatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=200'}
+                      alt={clientName}
+                      className="w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover border-2 border-[#b38a38]/50 shadow-sm"
+                      loading="lazy"
+                    />
+                    <div>
+                      <h4 className="text-[#181512] font-bold text-base sm:text-lg">
+                        {clientName}
+                      </h4>
+                      {clientRole && (
+                        <p className="text-xs sm:text-sm text-[#87641d] font-bold">
+                          {clientRole}
+                        </p>
+                      )}
+                      {company && (
+                        <p className="text-xs sm:text-sm text-[#6b6255]">
+                          {company}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="text-xs text-[#87641d] font-semibold flex items-center gap-1.5 bg-[#b38a38]/10 px-3.5 py-1.5 rounded-full border border-[#b38a38]/20 self-start sm:self-auto">
+                    <CheckCircle className="w-3.5 h-3.5 text-[#87641d]" />
+                    <span>{lang === 'ar' ? 'رأي موثّق ومثبت' : lang === 'tr' ? 'Doğrulanmış Değerlendirme' : 'Verified Review'}</span>
+                  </div>
+                </div>
+              </article>
+            );
+          })}
         </div>
       </div>
     </section>

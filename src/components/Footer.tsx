@@ -1,5 +1,5 @@
 import React from 'react';
-import { Scale, Phone, Mail, MapPin, Linkedin, Twitter, Youtube, ArrowUp, Lock, RefreshCw } from 'lucide-react';
+import { Scale, Phone, Mail, MapPin, Linkedin, Twitter, Youtube, ArrowUp, Lock, RefreshCw, ShieldCheck } from 'lucide-react';
 import { SiteSettings, PracticeArea, Language } from '../types';
 import { useTranslation, getLocalized } from '../services/i18n';
 
@@ -9,6 +9,7 @@ interface FooterProps {
   lang: Language;
   onOpenConsultation: (practiceId?: string) => void;
   onOpenAdmin: () => void;
+  onOpenSuperAdmin?: () => void;
 }
 
 export const Footer: React.FC<FooterProps> = ({
@@ -17,6 +18,7 @@ export const Footer: React.FC<FooterProps> = ({
   lang,
   onOpenConsultation,
   onOpenAdmin,
+  onOpenSuperAdmin,
 }) => {
   const t = useTranslation(lang);
 
@@ -280,6 +282,17 @@ export const Footer: React.FC<FooterProps> = ({
               <Lock className="w-3 h-3" />
               <span>{t.adminPanel}</span>
             </button>
+
+            {onOpenSuperAdmin && (
+              <button
+                onClick={onOpenSuperAdmin}
+                className="text-[#d8ceb8]/70 hover:text-amber-400 flex items-center gap-1 transition cursor-pointer text-[10px] bg-[#221d19] px-2.5 py-1 rounded-md border border-amber-500/20"
+                title={lang === 'ar' ? 'لوحة تحكم مدير المنصة واشتراكات المكاتب السحابية' : 'Platform Owner Console'}
+              >
+                <ShieldCheck className="w-3 h-3 text-amber-400" />
+                <span>{lang === 'ar' ? 'إدارة المنصة' : 'Platform'}</span>
+              </button>
+            )}
 
             <button
               onClick={scrollToTop}

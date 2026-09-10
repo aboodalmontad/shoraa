@@ -41,8 +41,8 @@ export function useSync<T extends { id: string; is_dirty?: boolean; updated_at: 
       const dirtyRecords = data.filter(r => r.is_dirty);
       for (const record of dirtyRecords) {
         const { is_dirty, ...cleanRecord } = record;
-        const { error } = await supabase
-          .from(tableName)
+        const { error } = await (supabase
+          .from(tableName) as any)
           .upsert(cleanRecord);
         
         if (!error) {

@@ -260,6 +260,15 @@ export interface SiteSettings {
   fontFamilyNavbar?: 'tajawal' | 'cairo' | 'amiri' | 'almarai' | 'elmessiri' | 'notokufi' | 'alexandria' | 'readex' | string;
   fontFamilyCards?: 'tajawal' | 'cairo' | 'almarai' | 'notokufi' | 'alexandria' | 'readex' | string;
 
+  contactPhone?: string;
+  contactEmail?: string;
+  contactWhatsapp?: string;
+  licenseNumber?: string;
+  heroHeadlineAr?: string;
+  heroHeadlineEn?: string;
+  heroSubheadlineAr?: string;
+  primaryColor?: string;
+
   adminPassword?: string;
 }
 
@@ -288,5 +297,71 @@ export interface AuditLog {
   entity: string;
   entityId?: string;
   details: string;
+}
+
+export interface LawFirmData {
+  settings: SiteSettings;
+  partners: Partner[];
+  practiceAreas: PracticeArea[];
+  caseStudies: CaseStudy[];
+  testimonials: Testimonial[];
+  blogPosts: BlogPost[];
+  offices: OfficeLocation[];
+  messages: ContactMessage[];
+  savedAt?: string;
+}
+
+export type SubscriptionPlanTier = 'starter' | 'professional' | 'enterprise' | 'custom';
+export type SubscriptionStatus = 'active' | 'expired' | 'suspended' | 'trial';
+
+export interface FirmSubscription {
+  planTier: SubscriptionPlanTier;
+  planNameAr: string;
+  planNameEn: string;
+  status: SubscriptionStatus;
+  isSiteActive: boolean; // Controls whether public landing page is active or suspended
+  startDate: string; // ISO date
+  endDate: string; // ISO date of annual renewal
+  annualFee?: number; // Annual fee amount
+  currency?: string; // 'SAR' | 'USD' | 'AED'
+  autoRenew?: boolean;
+  paymentStatus?: 'paid' | 'pending' | 'overdue';
+  notes?: string;
+}
+
+export interface LawFirm {
+  id: string;
+  slug: string; // Unique URL key, e.g. "al-adl", "al-tamimi", "nahwi-law"
+  nameAr: string;
+  nameEn: string;
+  nameTr?: string;
+  taglineAr?: string;
+  taglineEn?: string;
+  cityAr?: string;
+  cityEn?: string;
+  countryAr?: string;
+  countryEn?: string;
+  phone?: string;
+  email?: string;
+  logoUrl?: string;
+  licenseNumber?: string;
+  adminPassword: string; // Password / PIN for this specific law office manager
+  isVerified?: boolean;
+  featured?: boolean;
+  isDefaultPublic?: boolean; // When deployed to Vercel, indicates this is the primary firm shown on the root domain
+  customDomain?: string; // Optional custom domain mapping, e.g. www.nahwi-law.com
+  themeColor?: string;
+  createdAt: string;
+  updatedAt: string;
+  data: LawFirmData;
+  subscription?: FirmSubscription;
+}
+
+export interface SupabaseConfig {
+  url: string;
+  anonKey: string;
+  tableName: string; // default "law_firms"
+  isConnected?: boolean;
+  lastTestedAt?: string;
 }
 
